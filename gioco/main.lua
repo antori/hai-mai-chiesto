@@ -154,33 +154,38 @@ local function layoutQuantities()
   return head, rows
 end
 
+-- Le grandezze in alto (pallini e numeri), da destra a sinistra. Quelle che non stanno
+-- accanto a «Turno» scendono su una seconda riga: niente sovrapposizioni, niente tagli.
+-- Restituisce dove finisce l'intestazione.
 local function drawHeader(head)
   text("Turno " .. m.turno .. " di " .. d.turni, 13, 14, 11, 120, "left", C.dim)
-  local x = W - 14
+  local row, x, minX = 1, W - 14, 140
   for i = #head, 1, -1 do
     local g = head[i]
+    local lw = textWidth(g.etichetta, 12) + 6
+    local val, vw, n
     if g.stile == "pallini" then
-      local n = math.floor(g.max + 0.5)
+      n = math.floor(g.max + 0.5); vw = n * 12
+    else
+      val = shown(g) and Model.fmt(m.vars[g.nome] or 0) or "?"; vw = textWidth(val, 13) + 4
+    end
+    if x - vw - lw < minX and x < W - 14 then row, x, minX = row + 1, W - 14, 14 end
+    local dy = (row - 1) * 22
+    if n then
       local v = shown(g) and math.floor((m.vars[g.nome] or 0) + 0.5) or -1
-      local x0 = x - n * 12
+      local x0 = x - vw
       for k = 1, n do
         setc(C.truth, (v >= k) and 1 or 0.22)
         if v < 0 then setc(C.dim, 0.5) end
-        love.graphics.circle("fill", x0 + (k - 1) * 12 + 5, 19, 4.5)
+        love.graphics.circle("fill", x0 + (k - 1) * 12 + 5, 19 + dy, 4.5)
       end
-      local lw = textWidth(g.etichetta, 12) + 6
-      text(g.etichetta, 12, x0 - lw, 12, lw, "left", C.dim)
-      x = x0 - lw - 12
     else
-      local val = shown(g) and Model.fmt(m.vars[g.nome] or 0) or "?"
-      local lw = textWidth(val, 13) + 4
-      text(val, 13, x - lw, 11, lw, "right", C.text)
-      local nw = textWidth(g.etichetta, 12) + 6
-      text(g.etichetta, 12, x - lw - nw, 12, nw, "left", C.dim)
-      x = x - lw - nw - 12
+      text(val, 13, x - vw, 11 + dy, vw, "right", C.text)
     end
-    if x < 140 then break end
+    text(g.etichetta, 12, x - vw - lw, 12 + dy, lw, "left", C.dim)
+    x = x - vw - lw - 12
   end
+  return 38 + (row - 1) * 22
 end
 
 local function firstDiscover()
@@ -364,14 +369,14 @@ end
 
 local function drawGame()
   local head, rows = layoutQuantities()
-  drawHeader(head)
+  local top = drawHeader(head)
   local n, _, _, by = buttonsLayout()
   local ey = by - 8 - 56
   local need = 26 + (#d.opinioni > 0 and 44 or 0) + #rows * 30 + 8
   local ch = 140
-  if 38 + ch + 8 + need > ey - 6 then ch = math.max(104, ey - 6 - 8 - need - 38) end
-  drawCard(38, ch)
-  drawPanel(38 + ch + 8, ey - 6, rows)
+  if top + ch + 8 + need > ey - 6 then ch = math.max(104, ey - 6 - 8 - need - top) end
+  drawCard(top, ch)
+  drawPanel(top + ch + 8, ey - 6, rows)
   drawEsito(ey, 56)
   drawButtons(by, n)
 end

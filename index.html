@@ -153,14 +153,14 @@
 <header>
   <div class="top"><h1>L'hai mai chiesto?</h1><span>laboratorio · Lazzaretto Hospes</span></div>
   <nav>
-    <button data-tab="progetta">Progetta</button>
-    <button data-tab="gioca" class="on">Gioca</button>
+    <button data-tab="progetta" class="on">Progetta</button>
+    <button data-tab="gioca">Gioca</button>
     <button data-tab="condividi">Condividi</button>
     <button data-tab="codice">Codice</button>
   </nav>
 </header>
 <main>
-  <section id="tab-gioca" class="on">
+  <section id="tab-gioca">
     <div class="playbar">
       <span class="note" id="playNote"></span>
       <button class="btn" id="toDesign">‹ Progetta</button>
@@ -169,7 +169,7 @@
     <iframe id="game" title="Il gioco" allow="fullscreen"></iframe>
   </section>
 
-  <section id="tab-progetta">
+  <section id="tab-progetta" class="on">
     <div class="wrap wiz"><div id="wizHead"></div><div id="form"></div></div>
     <div id="wizBar"></div>
   </section>
@@ -1546,9 +1546,9 @@ design = loadSaved() || normalize(parseLua(EXAMPLE_LUA));
 loadWiz();
 if (!isExample()) wiz.started = true;
 renderWizard();
-// Prima visita (esempio intatto): si apre sul gioco, per giocarlo insieme.
-// Con un gioco proprio: si apre su «Progetta», al passo dove il gruppo era rimasto.
-if (isExample()) play(); else show("progetta");
+// Si apre sempre su «Progetta»: alla prima visita sulla schermata «Da dove partite?»,
+// poi al passo dove il gruppo era rimasto. Il gioco si carica quando si apre «Gioca» o «Prova».
+show("progetta");
 </script>
 </body>
 </html>

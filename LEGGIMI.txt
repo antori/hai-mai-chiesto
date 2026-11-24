@@ -1,0 +1,36 @@
+L'HAI MAI CHIESTO? · laboratorio LÖVE per Lazzaretto Hospes
+============================================================
+
+Questa cartella contiene lo stesso gioco in due forme, entrambe con il motore LÖVE vero.
+
+1) gioco/  ·  per LÖVE sul computer (proiettore)
+   - Installare LÖVE 11.5 da https://love2d.org
+   - Windows: trascinare la cartella "gioco" sull'icona di love.exe
+     oppure, da terminale:  love gioco
+   - Per far girare il design di un gruppo: sostituire gioco/design.lua
+     con il testo che il gruppo ha copiato da «Condividi» e rilanciare.
+   - Finestra verticale 720x1280: si può ridimensionare.
+
+2) index.html + game-love.html + engine/  ·  la pagina web con LÖVE vero (love.js)
+   - È la stessa pagina pubblicata su claude.ai, ma qui il gioco gira con
+     love.js (LÖVE 11.4 compilato in WebAssembly) invece che con l'interprete
+     Lua in JavaScript usato su claude.ai.
+   - Va messa su un server web statico (non si apre con doppio clic: il browser
+     blocca i file locali). Vanno bene GitHub Pages, un server della scuola o Ori.
+   - Il server deve servire i file .wasm come application/wasm (nginx e GitHub
+     Pages lo fanno già). Non servono intestazioni speciali: è la build
+     "compatibile" di love.js, senza thread.
+   - Il motore (engine/love.js, engine/love.wasm) viene dal pacchetto npm
+     love.js 11.4.1 (https://github.com/Davidobot/love.js), licenza MIT.
+
+Struttura del kit
+   conf.lua        finestra e moduli
+   main.lua        motore: disegno, turni, tocchi (non serve modificarlo)
+   lib/model.lua   il motore del kit: grandezze, azioni, regole, eventi, opinioni, finali
+   lib/expr.lua    il linguaggio di effetti e condizioni ("like + caso(30, 50)", "chatbot >= 4")
+   lib/loader.lua  legge design.lua, controlla i nomi, traduce gli errori in italiano
+   design.lua      IL FILE DEI GRUPPI (qui: l'esempio svolto «L'hai mai chiesto?»)
+   vuoto.lua       il punto di partenza di un gioco nuovo: copiatelo su design.lua
+
+Il riquadro con i numeri di aiuto nella schermata finale è nel motore
+(main.lua, funzione drawEnd) e non si cambia da design.lua.

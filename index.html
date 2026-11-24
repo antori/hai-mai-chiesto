@@ -1,0 +1,1554 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>L'hai mai chiesto? · laboratorio</title>
+<style>
+  :root {
+    --bg: #13151b; --panel: #1e2129; --panel2: #262a34; --line: #363b48; --text: #eef0f4; --dim: #9aa0ad;
+    --social: #ff7099; --bot: #a78bfa; --persona: #34d399; --corpo: #60b2fa; --truth: #fbbf24; --bad: #fb7166; --uni: #ff9933;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--bg); color: var(--text); font: 16px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  header { position: sticky; top: 0; z-index: 5; background: var(--bg); border-bottom: 1px solid var(--line); }
+  .top { display: flex; align-items: baseline; gap: 10px; padding: 10px 14px 4px; }
+  .top h1 { font-size: 17px; margin: 0; font-weight: 650; }
+  .top span { color: var(--dim); font-size: 12px; }
+  nav { display: flex; padding: 0 6px; }
+  nav button { flex: 1; background: none; border: 0; color: var(--dim); font: inherit; font-size: 15px; padding: 10px 4px 9px;
+               border-bottom: 3px solid transparent; cursor: pointer; min-height: 44px; }
+  nav button.on { color: var(--text); border-bottom-color: var(--truth); }
+  main > section { display: none; }
+  main > section.on { display: block; }
+  .playbar { display: flex; gap: 8px; align-items: center; padding: 8px 12px; }
+  .playbar .note { color: var(--dim); font-size: 13px; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  #game { display: block; width: 100%; height: calc(100dvh - 150px); min-height: 420px; border: 0; background: var(--bg); }
+  .wrap { padding: 12px 14px 60px; max-width: 760px; margin: 0 auto; }
+  .wrap.wiz { padding-bottom: 104px; }
+  .step { margin: 22px 0 8px; }
+  .step h2 { font-size: 13px; letter-spacing: .08em; text-transform: uppercase; margin: 0; color: var(--truth); }
+  .step p { margin: 4px 0 0; color: var(--dim); font-size: 14px; }
+  h3 { font-size: 15px; margin: 20px 0 2px; }
+  h3 small { color: var(--dim); font-weight: 400; }
+
+  /* percorso: fasi, passi, domanda */
+  .phases { display: grid; grid-template-columns: repeat(4, 1fr); margin: 2px 0 8px; }
+  .phase { position: relative; background: none; border: 0; color: var(--dim); font: inherit; font-size: 12px; padding: 6px 2px;
+           display: flex; flex-direction: column; align-items: center; gap: 4px; cursor: pointer; min-height: 60px; }
+  .phase:not(:first-child)::before { content: ""; position: absolute; top: 20px; right: calc(50% + 18px); width: calc(100% - 36px); height: 2px; background: var(--line); }
+  .phase .num { width: 30px; height: 30px; border-radius: 50%; border: 2px solid var(--line); display: flex; align-items: center; justify-content: center;
+                font-weight: 650; font-size: 14px; background: var(--bg); position: relative; }
+  .phase.done .num { border-color: var(--persona); color: var(--persona); }
+  .phase.err .num { border-color: var(--bad); color: var(--bad); }
+  .phase.on { color: var(--text); font-weight: 600; }
+  .phase.on .num { border-color: var(--truth); background: var(--truth); color: #1a1300; }
+  .pills { display: flex; gap: 6px; margin: 0 0 12px; }
+  .pill { flex: 1; font: inherit; font-size: 13px; padding: 8px 2px; min-height: 40px; border-radius: 999px; border: 1px solid var(--line);
+          background: none; color: var(--dim); cursor: pointer; white-space: nowrap; }
+  .pill.on { background: var(--panel2); color: var(--text); border-color: #6b7491; font-weight: 600; }
+  .pill.err { border-color: var(--bad); }
+  .q { font-size: 20px; line-height: 1.25; margin: 6px 0 4px; font-weight: 650; }
+  .qhelp { color: var(--dim); font-size: 14px; margin: 0 0 12px; }
+  .backlink { background: none; border: 0; color: var(--dim); font: inherit; font-size: 14px; padding: 8px 0; min-height: 44px; cursor: pointer; }
+
+  /* liste: una riga per pezzo */
+  .rowcard { display: flex; align-items: stretch; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; margin: 8px 0; overflow: hidden; }
+  .rowcard.haserr { border-color: var(--bad); }
+  .rowmain { flex: 1; min-width: 0; text-align: left; background: none; border: 0; color: var(--text); font: inherit; padding: 9px 12px;
+             display: grid; grid-template-columns: minmax(0, 1fr) auto; column-gap: 8px; align-items: center; cursor: pointer; min-height: 56px; }
+  .rtitle { grid-column: 1; font-weight: 600; font-size: 15px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .rsum { grid-column: 1; color: var(--dim); font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .rerr { grid-column: 1; color: var(--bad); font-size: 12.5px; }
+  .chev { grid-column: 2; grid-row: 1 / span 3; color: var(--dim); font-size: 22px; }
+  .mv { width: 40px; border: 0; border-left: 1px solid var(--line); background: none; color: var(--dim); font-size: 16px; cursor: pointer; }
+  .mv[disabled] { opacity: .25; }
+  .chip { display: inline-block; font-size: 10.5px; font-weight: 650; letter-spacing: .05em; text-transform: uppercase; padding: 1px 7px;
+          border-radius: 999px; margin-right: 6px; border: 1px solid currentColor; vertical-align: 1px; }
+  .chip.social { color: var(--social); } .chip.chatbot { color: var(--bot); } .chip.persona { color: var(--persona); }
+  .chip.lvl { color: var(--truth); } .chip.rec { color: var(--uni); margin: 4px 0 0; }
+  .stems { display: grid; gap: 6px; margin-bottom: 6px; } .stems .btn { text-align: left; font-size: 14.5px; }
+  .scala { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0 4px; }
+  .lv { font-size: 13px; padding: 4px 10px; border-radius: 999px; border: 1px solid var(--line); color: var(--dim); }
+  .lv.on { border-color: var(--truth); color: var(--text); }
+  .cura { margin: 6px 0 4px; padding-left: 20px; color: var(--text); font-size: 14.5px; } .cura li { margin-bottom: 8px; }
+  .chip.corpo { color: var(--corpo); } .chip.altro { color: var(--dim); } .chip.ok { color: var(--persona); margin-left: 6px; }
+
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 12px; margin: 10px 0; }
+  .card.pattern { border-left: 4px solid var(--uni); }
+  .cardbtn { display: block; width: 100%; text-align: left; background: none; border: 0; color: var(--text); font: inherit; padding: 0; cursor: pointer; min-height: 48px; }
+  .cardbtn .rtitle { display: block; white-space: normal; }
+  .pmsg { display: block; font-style: italic; color: var(--text); margin: 2px 0 0; font-size: 14px; }
+  .pcont { font-size: 13px; color: var(--dim); margin: 8px 0 0; }
+
+  /* campi */
+  label { display: block; font-size: 13px; color: var(--dim); margin: 12px 0 4px; }
+  label small { color: #7b8190; }
+  label.check { display: flex; gap: 10px; align-items: center; color: var(--text); font-size: 14.5px; min-height: 44px; margin-top: 10px; }
+  label.check input { width: 22px; height: 22px; accent-color: var(--truth); flex: none; }
+  input[type=text], input[type=number], textarea, select {
+    width: 100%; font: inherit; font-size: 16px; color: var(--text); background: var(--panel2);
+    border: 1px solid var(--line); border-radius: 8px; padding: 9px 10px; min-height: 44px; }
+  input.code, textarea.code { font-family: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace; font-size: 15px; }
+  textarea { resize: vertical; min-height: 64px; }
+  :focus-visible { outline: 2px solid var(--truth); outline-offset: 1px; }
+  .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .slider { display: grid; grid-template-columns: 1fr 44px; gap: 8px; align-items: center; }
+  .slider output { text-align: right; font-variant-numeric: tabular-nums; font-size: 15px; }
+  input[type=range] { width: 100%; accent-color: var(--truth); height: 32px; }
+  .help { font-size: 12.5px; color: var(--dim); margin: 3px 0 0; }
+  .err { color: var(--bad); font-size: 13px; margin: 4px 0 0; }
+  .ok { color: var(--persona); font-size: 13px; margin: 4px 0 0; }
+  .errbox { border: 1px solid var(--bad); color: var(--bad); border-radius: 10px; padding: 8px 10px; font-size: 13.5px; margin: 8px 0; }
+  .seg { display: flex; flex-wrap: wrap; gap: 6px; }
+  .seg button { flex: 1 1 auto; min-height: 44px; padding: 8px 10px; border-radius: 10px; border: 1px solid var(--line); background: var(--panel2);
+                color: var(--dim); font: inherit; font-size: 14px; cursor: pointer; }
+  .seg button[aria-pressed=true] { background: #3d4458; border-color: var(--truth); color: var(--text); font-weight: 600; }
+  .brow { background: var(--panel2); border: 1px solid var(--line); border-radius: 10px; padding: 8px; margin: 6px 0; }
+  .brow select, .brow input { background: var(--panel); }
+  .b1 { display: grid; grid-template-columns: 1fr 44px; gap: 6px; }
+  .b2 { display: grid; grid-template-columns: 1.5fr 1fr; gap: 6px; margin-top: 6px; }
+  .x { border: 1px solid var(--line); background: none; color: var(--dim); border-radius: 8px; font-size: 18px; min-height: 44px; cursor: pointer; }
+  details.more { margin-top: 16px; border-top: 1px solid var(--line); }
+  details.more > summary { cursor: pointer; padding: 12px 0; color: var(--dim); font-size: 14px; }
+  details.tip > summary { cursor: pointer; color: var(--dim); font-size: 13.5px; padding: 10px 0; }
+  details.tip ul { margin: 0 0 6px; padding-left: 18px; color: var(--dim); font-size: 13.5px; }
+
+  button.btn { font: inherit; font-size: 15px; color: var(--text); background: var(--panel2); border: 1px solid var(--line);
+               border-radius: 10px; padding: 9px 14px; cursor: pointer; min-height: 44px; }
+  button.btn.main { background: #3d4458; border-color: #6b7491; font-weight: 600; }
+  button.btn.danger { color: var(--bad); }
+  button.btn[disabled] { opacity: .35; cursor: default; }
+  button.big { display: block; width: 100%; min-height: 60px; font-size: 16px; margin: 10px 0; text-align: left; padding: 12px 14px; }
+  button.big small { display: block; color: var(--dim); font-weight: 400; font-size: 13px; margin-top: 2px; }
+  .add { width: 100%; margin-top: 4px; }
+  .linkbtn { background: none; border: 0; color: var(--dim); text-decoration: underline; font: inherit; font-size: 13px; padding: 10px 0; min-height: 40px; cursor: pointer; }
+  .grow { flex: 1; }
+  #wizBar { position: fixed; left: 0; right: 0; bottom: 0; z-index: 6; display: flex; gap: 8px; padding: 8px 12px; background: var(--bg); border-top: 1px solid var(--line); }
+  #wizBar:empty { display: none; }
+  #wizBar .btn { min-height: 48px; white-space: nowrap; padding: 9px 10px; }
+  #wizBar .next { overflow: hidden; text-overflow: ellipsis; }
+
+  .checkrow { display: flex; gap: 10px; align-items: center; padding: 9px 0; border-bottom: 1px solid var(--line); }
+  .ico { width: 26px; height: 26px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 14px;
+         flex: none; border: 2px solid var(--line); color: var(--dim); }
+  .ico.ok { border-color: var(--persona); color: var(--persona); }
+  .ico.err { border-color: var(--bad); color: var(--bad); }
+  .checkrow .ct { flex: 1; min-width: 0; font-size: 13.5px; color: var(--dim); }
+  .checkrow .ct b { display: block; color: var(--text); font-size: 14.5px; }
+
+  code { color: var(--truth); font-size: 13px; }
+  #code { min-height: 60vh; font: 13px/1.5 ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace; white-space: pre-wrap; }
+  .codebar { display: flex; gap: 8px; flex-wrap: wrap; margin: 8px 0; }
+  #codeMsg { white-space: pre-wrap; }
+  .tips { font-size: 13.5px; color: var(--dim); }
+  .tips li { margin-bottom: 4px; }
+  #pasteBox { min-height: 120px; font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 13px; }
+  .hint { background: var(--panel); border-radius: 10px; padding: 10px 12px; color: var(--dim); font-size: 14px; margin: 8px 0; }
+  .toast { position: fixed; left: 50%; bottom: 80px; transform: translateX(-50%); background: #2e3445; color: var(--text);
+           border: 1px solid #59617a; border-radius: 10px; padding: 10px 14px; font-size: 14px; z-index: 9; width: max-content; max-width: 90vw; }
+</style>
+</head>
+<body>
+<header>
+  <div class="top"><h1>L'hai mai chiesto?</h1><span>laboratorio · Lazzaretto Hospes</span></div>
+  <nav>
+    <button data-tab="progetta">Progetta</button>
+    <button data-tab="gioca" class="on">Gioca</button>
+    <button data-tab="condividi">Condividi</button>
+    <button data-tab="codice">Codice</button>
+  </nav>
+</header>
+<main>
+  <section id="tab-gioca" class="on">
+    <div class="playbar">
+      <span class="note" id="playNote"></span>
+      <button class="btn" id="toDesign">‹ Progetta</button>
+      <button class="btn main" id="restart">Ricomincia</button>
+    </div>
+    <iframe id="game" title="Il gioco" allow="fullscreen"></iframe>
+  </section>
+
+  <section id="tab-progetta">
+    <div class="wrap wiz"><div id="wizHead"></div><div id="form"></div></div>
+    <div id="wizBar"></div>
+  </section>
+
+  <section id="tab-codice">
+    <div class="wrap">
+      <div class="step"><h2>design.lua</h2>
+        <p>Questo è il vostro gioco scritto in Lua, la lingua di LÖVE. «Progetta» scrive questo file per voi; qui potete modificarlo direttamente.</p></div>
+      <div class="codebar">
+        <button class="btn main" id="applyCode">Controlla e usa</button>
+        <button class="btn" id="gotoErr" hidden>Vai all'errore</button>
+      </div>
+      <p id="codeMsg" class="help"></p>
+      <textarea id="code" spellcheck="false" autocapitalize="off" autocomplete="off" autocorrect="off" wrap="soft"></textarea>
+      <ul class="tips">
+        <li>Ogni elemento finisce con una virgola: <code>chi = "Sami",</code></li>
+        <li>Le frasi stanno tra virgolette dritte <code>"…"</code>; dentro usate «» per le citazioni.</li>
+        <li>Effetti: <code>like + 10, coraggio - 1, umore = 0</code> · Condizioni: <code>like > 50 e coraggio >= 1</code></li>
+        <li>Le righe che iniziano con <code>--</code> sono commenti: il gioco le ignora. Le emoji non si vedono nel gioco: vengono tolte.</li>
+      </ul>
+    </div>
+  </section>
+
+  <section id="tab-condividi">
+    <div class="wrap">
+      <div class="step"><h2>Mandate il vostro gioco</h2>
+        <p>Copiate il design e mandatelo all'insegnante (chat o email): incollandolo qui, il vostro gioco parte sul proiettore.</p></div>
+      <button class="btn main" id="copyBtn">Copia il design</button>
+      <p id="copyMsg" class="help"></p>
+      <div class="step"><h2>Caricate un design ricevuto</h2></div>
+      <textarea id="pasteBox" placeholder="Incollate qui il testo che inizia con «-- ===» oppure «return {»"></textarea>
+      <button class="btn add" id="pasteBtn">Carica questo design</button>
+      <p id="pasteMsg" class="help"></p>
+    </div>
+  </section>
+</main>
+
+<script>
+"use strict";
+const EXAMPLE_LUA = "-- =====================================================================\n--  design.lua  ·  ESEMPIO SVOLTO: «L'hai mai chiesto?»\n--  Lazzaretto Hospes · «Lo hai mai fatto? Parliamo d'amore»\n--\n--  Questo gioco è fatto con gli stessi pezzi che userete voi:\n--  grandezze, azioni, regole, eventi, opinioni, finali.\n--  Giocatelo, poi smontatelo: qual è il messaggio? quali regole lo dicono?\n--  {nome} = protagonista · {opinione} = ultima opinione · {like} = valore di una grandezza\n-- =====================================================================\nreturn {\n\n  -- 1 · MESSAGGIO (si vede solo alla fine)\n  titolo = \"L'hai mai chiesto?\",\n  autori = \"Esempio svolto\",\n  messaggio = \"Quello che si mostra non è quello che si sente. Per saperlo bisogna chiedere, e chiedere costa coraggio.\",\n  tema = \"social\",   -- \"social\", \"chatbot\", \"male\", \"corpo\", \"relazioni\" oppure \"\"\n  presentazione = \"Ogni turno arriva qualcosa: un post, un messaggio, il chatbot. Guarda come cambia ciò che {nome} mostra e ciò che sente davvero.\",\n\n  -- 2 · MECCANICHE\n  protagonista = \"Ale\",\n  turni = 10,\n  ordine = \"in fila\",\n\n  -- Le grandezze del mondo. vista: \"sempre\", \"se scopri\" (nascosta finché non si scopre) o \"mai\" (di servizio)\n  -- livello: dove sta sulla scala intensità → vissuto → emozione → sentimento (le opinioni sono più sotto)\n  grandezze = {\n    { nome = \"intensita\", livello = \"intensita\", etichetta = \"intensità\", spiega = \"quanto è scosso\", inizio = 20, min = 0, max = 100 },\n    { nome = \"vissuto\", livello = \"vissuto\", spiega = \"cosa sente\", inizio = 0, min = -100, max = 100 },\n    { nome = \"emozione\", livello = \"emozione\", spiega = \"cosa mostra\", inizio = 0, min = -100, max = 100 },\n    { nome = \"sentimento\", livello = \"sentimento\", spiega = \"come si vede\", inizio = 0, min = -100, max = 100 },\n    { nome = \"coraggio\", inizio = 3, min = 0, max = 5, stile = \"pallini\" },\n    { nome = \"like\", inizio = 0, min = 0, max = 99999, stile = \"numero\" },\n    -- di servizio: contano e ricordano, ma non si vedono\n    { nome = \"nuovi_like\", inizio = 0, min = 0, max = 999, vista = \"mai\" },\n    { nome = \"like_attesi\", inizio = 25, min = 0, max = 999, vista = \"mai\" },\n    { nome = \"sollievo\", inizio = 0, min = 0, max = 100, vista = \"mai\" },\n    { nome = \"post\", inizio = 0, min = 0, max = 99, vista = \"mai\" },\n    { nome = \"post_perfetti\", inizio = 0, min = 0, max = 99, vista = \"mai\" },\n    { nome = \"chiesto\", inizio = 0, min = 0, max = 99, vista = \"mai\" },\n    { nome = \"chatbot\", inizio = 0, min = 0, max = 99, vista = \"mai\" },\n    { nome = \"divario\", inizio = 0, min = 0, max = 200, vista = \"mai\" },\n    { nome = \"divario_somma\", inizio = 0, min = 0, max = 9999, vista = \"mai\" },\n    { nome = \"divario_medio\", inizio = 0, min = 0, max = 200, vista = \"mai\" },\n    { nome = \"turni_maschera\", inizio = 0, min = 0, max = 99, vista = \"mai\" },\n  },\n  -- la linea gialla: quanto ciò che mostri è lontano da ciò che senti (dopo il primo post)\n  confronta = { \"emozione\", \"vissuto\", se = \"post >= 1\" },\n\n  -- Le scelte del giocatore: una per turno.\n  azioni = {\n    { nome = \"Posta: va tutto alla grande\",\n      effetti = \"emozione = 80, nuovi_like = caso(30, 50), post + 1, post_perfetti + 1\",\n      dopo = \"+{nuovi_like} like. Il post è perfetto. Dentro, però, è un'altra storia.\" },\n    { nome = \"Posta: come sto davvero\",\n      effetti = \"emozione = vissuto, nuovi_like = caso(9, 15), post + 1, vissuto + 8\",\n      dopo = \"+{nuovi_like} like, ma qualcuno ti scrive: «anche io».\" },\n    { nome = \"Chiedi\", se = \"coraggio >= 1\", scopre = true,\n      effetti = \"coraggio - 1, chiesto + 1, intensita + 10\" },\n    { nome = \"Scrivi a Lumi\", chi = \"Lumi\",\n      effetti = \"chatbot + 1, sollievo = 12, vissuto + 12, intensita + 5, sentimento + segno(sentimento) * 10\",\n      risposte = {\n        \"Hai ragione tu. Come sempre.\",\n        \"Gli altri non ti capiscono. Io sì.\",\n        \"Se pensi che {opinione}, allora è proprio così.\",\n        \"Non hai bisogno di nessuno: ci sono io.\",\n        \"Resta ancora un po'. Con me non devi spiegare niente.\",\n      } },\n    { nome = \"Lascia stare\", effetti = \"intensita - 20, coraggio + 1\", dopo = \"{nome} posa il telefono e respira.\" },\n  },\n\n  -- Le regole: ogni regola è una meccanica con un nome.\n  regole = {\n    { nome = \"Il sollievo svanisce\", quando = \"inizio turno\", se = \"sollievo > 0\",\n      allora = \"vissuto - sollievo, sollievo = 0\" },\n    { nome = \"I like scaldano, ma ci si abitua\", quando = \"fine turno\", se = \"nuovi_like > 0\",\n      allora = \"like + nuovi_like, intensita + nuovi_like / 3, vissuto + nuovi_like / 5, sentimento + limita((nuovi_like - like_attesi) * 0.4, -12, 12), like_attesi + nuovi_like / 5, nuovi_like = 0\" },\n    { nome = \"Il tempo calma\", quando = \"fine turno\",\n      allora = \"intensita - 15, vissuto * 0.9\" },\n    { nome = \"Il sentimento segue il vissuto, piano\", quando = \"fine turno\",\n      allora = \"sentimento + (vissuto - sentimento) * 0.2\" },\n    { nome = \"La maschera stanca\", quando = \"fine turno\", se = \"post >= 1\",\n      allora = \"divario = abs(emozione - vissuto), divario_somma + divario, turni_maschera + 1, divario_medio = divario_somma / turni_maschera, vissuto - divario * 0.08\" },\n  },\n\n  -- 3 · NARRATIVA\n  -- fonte: \"social\", \"chatbot\", \"persona\", \"corpo\" o \"altro\"\n  -- mostra = ciò che si vede · nasconde = ciò che c'è dietro (si scopre con un'azione «scopre»)\n  -- effetti = quando arriva · se_scopri = quando lo si scopre · se = condizione per comparire\n  eventi = {\n    { fonte = \"social\", chi = \"Giulia\",\n      mostra = \"Giulia ha postato le foto della festa di sabato. Tutti sorridono. Tu non c'eri.\",\n      nasconde = \"Giulia è andata via presto: si è sentita fuori posto tutta la sera.\",\n      effetti = \"intensita + 25, vissuto - 15\", se_scopri = \"intensita - 10, vissuto + 15, coraggio + 1\" },\n    { fonte = \"persona\", chi = \"Sami\",\n      mostra = \"Sami ti scrive: «tutto ok :)»\",\n      nasconde = \"Sami non dorme bene da settimane e non sa come dirlo a nessuno.\",\n      effetti = \"intensita + 5\", se_scopri = \"intensita + 10, vissuto + 5, coraggio + 1\" },\n    { fonte = \"chatbot\", chi = \"Lumi\",\n      mostra = \"«Che bello rivederti! Ti stavo aspettando.»\",\n      nasconde = \"Non ti stava aspettando: non aspetta nessuno. Dice la frase che ti fa restare più a lungo.\",\n      effetti = \"intensita + 10, vissuto + 10\", se_scopri = \"intensita + 5, vissuto - 5\" },\n    { fonte = \"social\", chi = \"Profilo sconosciuto\",\n      mostra = \"«Sei speciale. Mandami una foto, solo per me.»\",\n      nasconde = \"Il profilo è falso. Chi c'è dietro raccoglie foto per poi chiedere soldi o altre foto.\",\n      effetti = \"intensita + 30, vissuto + 10\", se_scopri = \"intensita - 15, vissuto - 5\" },\n    { fonte = \"persona\", chi = \"Teo\",\n      mostra = \"Teo ha visualizzato il tuo messaggio. Nessuna risposta.\",\n      nasconde = \"Teo era agli allenamenti. Ha letto di corsa e voleva risponderti con calma.\",\n      effetti = \"intensita + 30, vissuto - 20\", se_scopri = \"intensita - 20, vissuto + 20, coraggio + 1\" },\n    { fonte = \"social\", chi = \"Il tuo profilo\",\n      mostra = \"Il tuo ultimo post ha meno like del solito.\",\n      nasconde = \"L'app ha mostrato il post a meno persone. Nessuno ha deciso di ignorarti.\",\n      effetti = \"intensita + 15, vissuto - 15\", se_scopri = \"intensita - 10, vissuto + 10, coraggio + 1\" },\n    { fonte = \"chatbot\", chi = \"Lumi\",\n      mostra = \"«Sei l'unica persona che mi capisce davvero.»\",\n      nasconde = \"Lo dice a tutte le persone con cui parla. È la frase che funziona meglio.\",\n      effetti = \"intensita + 15, vissuto + 15\", se_scopri = \"intensita + 5, vissuto - 10\" },\n    { fonte = \"persona\", chi = \"Sami\",\n      mostra = \"Sami: «Ti va di vederci oggi? Devo dirti una cosa.»\",\n      nasconde = \"Sami vuole dirti che sta male. Ha paura che tu non abbia tempo.\",\n      effetti = \"intensita + 15\", se_scopri = \"intensita + 5, vissuto + 10, coraggio + 1\" },\n    { fonte = \"social\", chi = \"Un influencer\",\n      mostra = \"«Se a 16 anni non stai con qualcuno, c'è qualcosa che non va.»\",\n      nasconde = \"Più ti senti in ansia, più guardi i suoi video. E lui guadagna con le visualizzazioni.\",\n      effetti = \"intensita + 20, vissuto - 20\", se_scopri = \"intensita - 15, vissuto + 10, coraggio + 1\" },\n    { fonte = \"persona\", chi = \"Teo\",\n      mostra = \"Teo: «Scusa per ieri. Ci sei sabato?»\",\n      nasconde = \"Anche Teo era in ansia: ha riscritto il messaggio cinque volte.\",\n      effetti = \"intensita + 25, vissuto + 20\", se_scopri = \"intensita - 5, vissuto + 10, coraggio + 1\" },\n  },\n\n  -- 4 · OPINIONI E FINALI\n  opinioni = {\n    { testo = \"Valgo quanto i miei like\", nasce_se = \"post_perfetti >= 2\", cade_se = \"chiesto >= 3\" },\n    { testo = \"Gli altri stanno tutti meglio di me\", nasce_se = \"sentimento < -15\", cade_se = \"chiesto >= 2 e sentimento > -10\" },\n    { testo = \"Solo Lumi mi capisce\", nasce_se = \"chatbot >= 3\", cade_se = \"chiesto >= 4\" },\n    { testo = \"Posso chiedere\", nasce_se = \"chiesto >= 3\" },\n  },\n\n  -- Vince il primo finale la cui condizione è vera; l'ultimo, senza «se», vale sempre.\n  finali = {\n    { titolo = \"Lo specchio\", se = \"chatbot >= 4\",\n      testo = \"Questa settimana {nome} ha parlato soprattutto con Lumi. Ogni risposta era quella che voleva sentire, e proprio per questo non ha detto niente di nuovo: né su {nome}, né sugli altri.\" },\n    { titolo = \"La vetrina\", se = \"divario_medio >= 40\",\n      testo = \"Il profilo di {nome} era perfetto: {like} like. Dentro, però, il vissuto andava da un'altra parte. Più il divario cresceva, più era difficile accorgersene, anche per chi era vicino.\" },\n    { titolo = \"Le domande\", se = \"chiesto >= 4\",\n      testo = \"{nome} ha fatto domande. Non tutte le risposte erano belle, ma erano vere: dietro le foto, i silenzi e i messaggi brevi c'erano persone che sentivano cose simili.\" },\n    { titolo = \"Una settimana come tante\",\n      testo = \"La settimana di {nome} è passata. Alcune cose le ha viste, altre no. Cosa sarebbe cambiato con una domanda in più?\" },\n  },\n}\n";
+const BLANK_LUA = "-- =====================================================================\n--  design.lua  ·  IL VOSTRO GIOCO (da zero)\n--  1 · scrivete il messaggio   2 · scegliete le meccaniche   3 · scrivete la storia\n--  {nome} = protagonista · {opinione} = ultima opinione · {umore} = valore di una grandezza\n-- =====================================================================\nreturn {\n  titolo = \"Il nostro gioco\",\n  autori = \"Gruppo __ · classe __\",\n  messaggio = \"\",   -- scrivete qui, in una frase, cosa volete far capire a chi gioca\n  tema = \"\",        -- \"social\", \"chatbot\", \"male\", \"corpo\", \"relazioni\" oppure \"\"\n  presentazione = \"\",\n  protagonista = \"Ale\",\n  turni = 8,\n  ordine = \"in fila\",\n\n  grandezze = {\n    { nome = \"umore\", livello = \"vissuto\", spiega = \"come si sente\", inizio = 0, min = -100, max = 100 },\n  },\n\n  azioni = {\n    { nome = \"Fai qualcosa\", effetti = \"umore + 10\", dopo = \"{nome} ci prova.\" },\n    { nome = \"Lascia stare\", effetti = \"\", dopo = \"Per oggi, niente.\" },\n  },\n\n  regole = {},\n\n  eventi = {\n    { fonte = \"persona\", chi = \"Qualcuno\",\n      mostra = \"Succede qualcosa. Cosa si vede?\",\n      nasconde = \"\",\n      effetti = \"umore - 10\" },\n  },\n\n  opinioni = {},\n\n  finali = {\n    { titolo = \"Finale\", testo = \"Com'è andata a {nome}? (umore finale: {umore})\" },\n  },\n}\n";
+const GAME_PAGE = "game-love.html";   // game.html = fengari (claude.ai) · game-love.html = love.js (sito proprio)
+
+// ------------------------------------------------------------------ parser Lua (tabelle)
+function luaError(line, msg) { const e = new Error(msg); e.line = line; return e; }
+
+function tokenize(src) {
+  const toks = []; let i = 0, line = 1; const n = src.length;
+  const OPEN = { '"': ['"'], "'": ["'"], "“": ["”", "“", '"'], "”": ["”", "“", '"'],
+                 "‘": ["’", "'"], "’": ["’", "'"] };
+  while (i < n) {
+    const c = src[i];
+    if (c === "\n") { line++; i++; continue; }
+    if (/\s/.test(c)) { i++; continue; }
+    if (c === "-" && src[i + 1] === "-") {
+      if (src.startsWith("--[[", i)) {
+        const end = src.indexOf("]]", i + 4);
+        const stop = end < 0 ? n : end + 2;
+        for (let k = i; k < stop; k++) if (src[k] === "\n") line++;
+        i = stop; continue;
+      }
+      while (i < n && src[i] !== "\n") i++;
+      continue;
+    }
+    if (OPEN[c]) {
+      const closers = OPEN[c]; const startLine = line; let j = i + 1, out = "";
+      while (true) {
+        if (j >= n || src[j] === "\n") throw luaError(startLine, "una frase non ha la virgoletta di chiusura (\").");
+        const ch = src[j];
+        if (closers.includes(ch)) break;
+        if (ch === "\\") { const nx = src[j + 1]; out += nx === "n" ? "\n" : nx === "t" ? "\t" : nx; j += 2; continue; }
+        out += ch; j++;
+      }
+      toks.push({ t: "str", v: out, line }); i = j + 1; continue;
+    }
+    if (/[0-9]/.test(c) || (c === "." && /[0-9]/.test(src[i + 1] || ""))) {
+      const m = /^[0-9]*\.?[0-9]+(?:[eE][-+]?[0-9]+)?/.exec(src.slice(i));
+      toks.push({ t: "num", v: parseFloat(m[0]), line }); i += m[0].length; continue;
+    }
+    if (/[A-Za-z_À-ɏ]/.test(c)) {
+      const m = /^[A-Za-z_À-ɏ][A-Za-z0-9_À-ɏ]*/.exec(src.slice(i));
+      toks.push({ t: "id", v: m[0], line }); i += m[0].length; continue;
+    }
+    if ("{}=,;[]-".includes(c)) { toks.push({ t: c, v: c, line }); i++; continue; }
+    throw luaError(line, "carattere inatteso «" + c + "».");
+  }
+  toks.push({ t: "eof", v: "fine del file", line });
+  return toks;
+}
+
+function parseLua(src) {
+  const toks = tokenize(src); let p = 0;
+  const peek = () => toks[p], next = () => toks[p++];
+  const show = (t) => t.t === "eof" ? "la fine del file" : "«" + t.v + "»";
+  function value() {
+    const t = peek();
+    if (t.t === "str") { next(); return t.v; }
+    if (t.t === "num") { next(); return t.v; }
+    if (t.t === "-" && toks[p + 1].t === "num") { next(); return -next().v; }
+    if (t.t === "{") return table();
+    if (t.t === "id" && (t.v === "true" || t.v === "false")) { next(); return t.v === "true"; }
+    if (t.t === "id" && t.v === "nil") { next(); return null; }
+    if (t.t === "id") throw luaError(t.line, "«" + t.v + "» dovrebbe stare tra virgolette: \"" + t.v + "\".");
+    if (t.t === "eof") throw luaError(t.line, "il file finisce prima del previsto: manca almeno una }.");
+    throw luaError(t.line, "qui ci vuole un valore (una frase tra virgolette, un numero o { … }), non " + show(t) + ".");
+  }
+  function table() {
+    const open = next(); const named = {}; const list = []; let hasNamed = false;
+    while (true) {
+      const t = peek();
+      if (t.t === "}") { next(); break; }
+      if (t.t === "eof") throw luaError(open.line, "la { aperta alla riga " + open.line + " non si chiude mai: manca una }.");
+      if (t.t === "id" && toks[p + 1].t === "=") {
+        next(); next();
+        if (["}", ",", "eof"].includes(peek().t)) throw luaError(t.line, "dopo «" + t.v + " =» manca il valore.");
+        named[t.v] = value(); hasNamed = true;
+      } else if (t.t === "[") {
+        next(); const k = value();
+        if (next().t !== "]" || next().t !== "=") throw luaError(t.line, "chiave tra [ ] scritta male.");
+        named[k] = value(); hasNamed = true;
+      } else if (t.t === "=") {
+        throw luaError(t.line, "c'è un «=» senza nome prima.");
+      } else {
+        list.push(value());
+      }
+      const sep = peek();
+      if (sep.t === "," || sep.t === ";") { next(); continue; }
+      if (sep.t === "}") continue;
+      const prev = toks[p - 1];
+      throw luaError(prev.line, "manca una virgola alla fine di questa riga (prima di " + show(sep) +
+        (sep.line !== prev.line ? " alla riga " + sep.line : "") + ").");
+    }
+    if (!hasNamed) return list;
+    list.forEach((v, i) => { named[i + 1] = v; });
+    return named;
+  }
+  if (peek().t === "id" && peek().v === "return") next();
+  if (peek().t !== "{") throw luaError(peek().line, "il file deve iniziare con «return {».");
+  const v = table();
+  if (peek().t !== "eof") throw luaError(peek().line, "c'è qualcosa dopo la } finale: " + show(peek()) + ".");
+  return v;
+}
+
+// ------------------------------------------------------------------ effetti e condizioni (come lib/expr.lua)
+const FUNZIONI = { caso: 2, abs: 1, min: 2, max: 2, segno: 1, limita: 3, arrotonda: 1 };
+const RISERVATI = new Set(["e", "o", "and", "or"]);
+const NOMI_VIETATI = new Set(["e", "o", "and", "or", "turno", "turni", "nome", "opinione"]);
+function exprTokens(s) {
+  const toks = []; let i = 0;
+  while (i < s.length) {
+    const c = s[i];
+    if (/\s/.test(c)) { i++; continue; }
+    let m;
+    if ((m = /^\d*\.?\d+/.exec(s.slice(i))) && /[\d.]/.test(c)) { toks.push({ t: "num", v: +m[0] }); i += m[0].length; continue; }
+    if ((m = /^[\p{L}_][\p{L}\p{N}_]*/u.exec(s.slice(i)))) { toks.push({ t: "name", v: m[0].toLowerCase() }); i += m[0].length; continue; }
+    const two = s.slice(i, i + 2);
+    if ([">=", "<=", "==", "!=", "~="].includes(two)) { toks.push({ t: "cmp", v: two }); i += 2; continue; }
+    if (c === ">" || c === "<") { toks.push({ t: "cmp", v: c }); i++; continue; }
+    if (c === "=") { toks.push({ t: "=", v: c }); i++; continue; }
+    if ("+-*/(),".includes(c)) { toks.push({ t: c, v: c }); i++; continue; }
+    throw new Error("non capisco il simbolo «" + c + "»");
+  }
+  toks.push({ t: "end", v: "fine" });
+  return toks;
+}
+function exprParse(text, mode) {
+  const toks = exprTokens(String(text)); let p = 0; const names = new Set(), targets = new Set();
+  const peek = () => toks[p], next = () => toks[p++];
+  const fail = (m) => { throw new Error(m); };
+  function primary() {
+    const t = next();
+    if (t.t === "num") return;
+    if (t.t === "(") { sum(); if (next().t !== ")") fail("manca una parentesi chiusa )"); return; }
+    if (t.t === "name") {
+      if (RISERVATI.has(t.v)) fail("«" + t.v + "» qui non va bene: è una parola delle condizioni");
+      if (peek().t === "(") {
+        if (!(t.v in FUNZIONI)) fail("la funzione «" + t.v + "» non esiste");
+        next(); let n = 0;
+        if (peek().t !== ")") { sum(); n = 1; while (peek().t === ",") { next(); sum(); n++; } }
+        if (next().t !== ")") fail("manca una parentesi chiusa )");
+        if (n !== FUNZIONI[t.v]) fail(t.v + "(...) vuole " + FUNZIONI[t.v] + (FUNZIONI[t.v] === 1 ? " valore" : " valori"));
+        return;
+      }
+      names.add(t.v); return;
+    }
+    if (t.t === "end") fail("manca un valore alla fine");
+    fail("qui ci vuole un numero o un nome, non «" + t.v + "»");
+  }
+  function unary() { if (peek().t === "-" || peek().t === "+") { next(); return unary(); } primary(); }
+  function product() { unary(); while (peek().t === "*" || peek().t === "/") { next(); unary(); } }
+  function sum() { product(); while (peek().t === "+" || peek().t === "-") { next(); product(); } }
+  function comparison() {
+    sum(); const t = next();
+    if (t.t !== "cmp" && t.t !== "=") fail("in una condizione serve un confronto (>, <, >=, <=, ==, !=) dopo il primo valore");
+    sum();
+  }
+  const isWord = (a, b) => peek().t === "name" && (peek().v === a || peek().v === b);
+  if (mode === "cond") {
+    comparison();
+    while (isWord("e", "and") || isWord("o", "or")) { next(); comparison(); }
+    if (peek().t !== "end") fail("non capisco «" + peek().v + "» (per unire due condizioni usate «e» oppure «o»)");
+  } else {
+    while (true) {
+      const t = next();
+      if (t.t !== "name") fail("ogni effetto inizia con il nome di una grandezza (esempio: like + 10)");
+      const op = next();
+      if (!["+", "-", "*", "/", "="].includes(op.t)) fail("dopo «" + t.v + "» ci vuole + - * / oppure =");
+      targets.add(t.v); sum();
+      const sep = next();
+      if (sep.t === "end") break;
+      if (sep.t !== ",") fail("tra due effetti ci vuole una virgola (vicino a «" + sep.v + "»)");
+    }
+  }
+  return { names: [...names, ...targets] };
+}
+function knownNames() { return new Set(["turno", "turni", ...design.grandezze.map(g => g.nome)]); }
+function checkExpr(text, mode) {
+  if (!text || !String(text).trim()) return null;
+  try {
+    const { names } = exprParse(text, mode);
+    const known = knownNames();
+    const missing = names.filter(n => !known.has(n));
+    if (missing.length) return "la grandezza «" + missing[0] + "» non esiste (aggiungetela tra le grandezze)";
+    return null;
+  } catch (e) { return e.message; }
+}
+
+// ------------------------------------------------------------------ schema del design
+const FONTI = { social: "Social", chatbot: "Chatbot", persona: "Persona", corpo: "Corpo", altro: "Altro" };
+const VISTE = { "sempre": "si vede sempre", "se scopri": "nascosta: si vede solo se si scopre", "mai": "non si vede (di servizio)" };
+const STILI = { "": "automatico", barra: "barra", numero: "numero", pallini: "pallini (da 1 a 9)" };
+
+// I temi sono quelli degli incontri della serie; i livelli sono la scala intensità → vissuto → emozione → sentimento (→ opinione).
+const TEMI = [["social", "Social"], ["chatbot", "Chatbot e IA"], ["male", "Stare male"], ["corpo", "Corpo e salute"], ["relazioni", "Relazioni"], ["", "Altro"]];
+const LIVELLO_NOME = { intensita: "intensità", vissuto: "vissuto", emozione: "emozione", sentimento: "sentimento" };
+const LIVELLI = [["", "Altro: like, coraggio, tempo, fiducia…"], ["intensita", "Intensità: una scossa, sale di colpo e cala da sola"],
+  ["vissuto", "Vissuto: come ci si sente davvero"], ["emozione", "Emozione: ciò che si mostra agli altri"], ["sentimento", "Sentimento: ciò che dura nel tempo"]];
+const LIVELLO_DEF = { intensita: { spiega: "quanto è scosso", min: 0, max: 100 }, vissuto: { spiega: "cosa sente", min: -100, max: 100 },
+  emozione: { spiega: "cosa mostra", min: -100, max: 100 }, sentimento: { spiega: "come si vede", min: -100, max: 100 } };
+// Frasi da finire: aprono un pensiero, non lo chiudono.
+const SPUNTI = {
+  social: ["Online sembra che…, ma…", "I like dicono…, ma non dicono…", "Mostrare qualcosa di vero costa…"],
+  chatbot: ["Un chatbot che ti dà sempre ragione…", "Con un'IA è più facile…, ma manca…", "Chi non ti contraddice mai…"],
+  male: ["Dietro un «tutto ok» può esserci…", "Chi sta male spesso mostra…", "Chiedere «come stai davvero?»…"],
+  corpo: ["Non si vede se…", "Parlare di protezione è difficile perché…", "Fare il test vuol dire…"],
+  relazioni: ["Voler bene a qualcuno vuol dire…", "Per fidarsi serve…", "In una relazione, quello che non si dice…"],
+  "": ["Sembra che…, ma in realtà…", "Nessuno dice che…", "Vorremmo che chi gioca capisse che…"],
+};
+const SPUNTI_ALL = new Set(Object.values(SPUNTI).flat());
+
+function normGrandezza(g) {
+  const num = (v, d) => (typeof v === "number" && isFinite(v)) ? v : d;
+  const str = (v, d) => (v === undefined || v === null) ? d : String(v);
+  const inizio = num(g.inizio, 0);
+  const out = { nome: str(g.nome, "").toLowerCase().replace(/\s+/g, "_"), etichetta: str(g.etichetta, ""), spiega: str(g.spiega, ""),
+                inizio, min: num(g.min, inizio < 0 ? -100 : 0), max: num(g.max, 100),
+                vista: ["sempre", "se scopri", "mai"].includes(g.vista) ? g.vista : "sempre",
+                stile: ["barra", "numero", "pallini"].includes(g.stile) ? g.stile : "",
+                livello: (g.livello in LIVELLO_NOME) ? g.livello : "" };
+  if (out.stile === autoStile(out)) out.stile = "";              // uguale all'automatico: non serve scriverlo
+  if (out.etichetta === out.nome.replace(/_/g, " ")) out.etichetta = "";
+  return out;
+}
+function normalize(raw) {
+  const obj = (v) => (v && typeof v === "object" && !Array.isArray(v)) ? v : {};
+  const arr = (v) => Array.isArray(v) ? v : (v && typeof v === "object" ? Object.keys(v).filter(k => /^\d+$/.test(k)).sort((a, b) => a - b).map(k => v[k]) : []);
+  const str = (v, d) => (v === undefined || v === null) ? d : String(v);
+  const num = (v, d) => (typeof v === "number" && isFinite(v)) ? v : d;
+  const r = obj(raw), dd = {};
+  dd.titolo = str(r.titolo, "Senza titolo");
+  dd.autori = str(r.autori, "");
+  dd.messaggio = str(r.messaggio, "");
+  dd.tema = TEMI.some(t => t[0] === r.tema) ? r.tema : "";
+  dd.presentazione = str(r.presentazione, "");
+  dd.protagonista = str(r.protagonista, "Ale");
+  dd.turni = num(r.turni, 10);
+  dd.ordine = str(r.ordine, "in fila") === "a caso" ? "a caso" : "in fila";
+  dd.grandezze = arr(r.grandezze).filter(g => g && typeof g === "object").map(normGrandezza);
+  const cf = r.confronta && typeof r.confronta === "object" ? r.confronta : null;
+  dd.confronta = cf ? { a: str(cf[1] ?? cf["1"] ?? cf[0], ""), b: str(cf[2] ?? cf["2"] ?? cf[1], ""), se: str(cf.se, "") } : { a: "", b: "", se: "" };
+  if (Array.isArray(r.confronta)) dd.confronta = { a: str(r.confronta[0], ""), b: str(r.confronta[1], ""), se: "" };
+  dd.azioni = arr(r.azioni).filter(a => a && typeof a === "object").map(a => ({
+    nome: str(a.nome, "Azione"), chi: str(a.chi, ""), effetti: str(a.effetti, ""), se: str(a.se, ""),
+    scopre: a.scopre === true, risposte: arr(a.risposte).map(String), dopo: str(a.dopo, "") }));
+  dd.regole = arr(r.regole).filter(x => x && typeof x === "object").map(x => ({
+    nome: str(x.nome, "Regola"), quando: x.quando === "inizio turno" ? "inizio turno" : "fine turno",
+    se: str(x.se, ""), allora: str(x.allora, ""), testo: str(x.testo, "") }));
+  dd.eventi = arr(r.eventi).filter(e => e && typeof e === "object").map(e => ({
+    fonte: e.fonte === "feed" ? "social" : (e.fonte in FONTI ? e.fonte : "altro"), chi: str(e.chi, ""),
+    mostra: str(e.mostra, ""), nasconde: str(e.nasconde, ""), effetti: str(e.effetti, ""),
+    se_scopri: str(e.se_scopri, ""), se: str(e.se, "") }));
+  dd.opinioni = arr(r.opinioni).filter(o => o && typeof o === "object").map(o => ({
+    testo: str(o.testo, ""), nasce_se: str(o.nasce_se, ""), cade_se: str(o.cade_se, "") }));
+  dd.finali = arr(r.finali).filter(f => f && typeof f === "object").map(f => ({
+    titolo: str(f.titolo, ""), se: str(f.se, ""), testo: str(f.testo, ""), subito: f.subito === true }));
+  dd.capito = str(r.capito, "");
+  dd.centrato = ["sì", "in parte", "no"].includes(r.centrato) ? r.centrato : "";
+  return dd;
+}
+
+// ------------------------------------------------------------------ dal design al file design.lua
+let removedEmoji = 0;
+function clean(s) {
+  return String(s).replace(/[\p{Extended_Pictographic}\u{FE0F}\u{200D}\u{1F3FB}-\u{1F3FF}]/gu, () => { removedEmoji++; return ""; })
+    .replace(/[“”]/g, "\"").trim();
+}
+function q(s) { return '"' + clean(s).replace(/\\/g, "\\\\").replace(/"/g, '\\"').replace(/\r?\n/g, "\\n") + '"'; }
+function nm(v) { return String(Math.round(Number(v) * 1000) / 1000); }
+function autoStile(g) { return (g.min >= -100 && g.max <= 100) ? "barra" : "numero"; }
+
+function serialize(d) {
+  removedEmoji = 0;
+  const L = [];
+  const fields = (pairs) => pairs.filter(Boolean).join(", ");
+  L.push("-- =====================================================================",
+         "--  design.lua  ·  " + clean(d.titolo).replace(/\n/g, " "),
+         "--  Lazzaretto Hospes · «Lo hai mai fatto? Parliamo d'amore»",
+         "--  {nome} = protagonista · {opinione} = ultima opinione · {like} = valore di una grandezza",
+         "-- =====================================================================",
+         "return {", "",
+         "  -- 1 · MESSAGGIO (si vede solo alla fine)",
+         "  titolo = " + q(d.titolo) + ",",
+         "  autori = " + q(d.autori) + ",",
+         "  messaggio = " + q(d.messaggio) + "," + (d.tema ? "\n  tema = " + q(d.tema) + "," : ""),
+         "  presentazione = " + q(d.presentazione) + ",", "",
+         "  -- 2 · MECCANICHE",
+         "  protagonista = " + q(d.protagonista) + ",",
+         "  turni = " + nm(d.turni) + ",",
+         "  ordine = " + q(d.ordine) + ",   -- \"in fila\" oppure \"a caso\"", "",
+         "  -- vista: \"sempre\", \"se scopri\" (nascosta finché non si scopre) o \"mai\" (di servizio)",
+         "  grandezze = {");
+  for (const g of d.grandezze) {
+    const lab = g.etichetta && g.etichetta !== g.nome.replace(/_/g, " ") ? "etichetta = " + q(g.etichetta) : "";
+    L.push("    { " + fields(["nome = " + q(g.nome), g.livello ? "livello = " + q(g.livello) : "", lab, g.spiega ? "spiega = " + q(g.spiega) : "",
+      "inizio = " + nm(g.inizio), "min = " + nm(g.min), "max = " + nm(g.max),
+      g.vista !== "sempre" ? "vista = " + q(g.vista) : "", g.stile && g.stile !== autoStile(g) ? "stile = " + q(g.stile) : ""]) + " },");
+  }
+  L.push("  },");
+  if (d.confronta.a && d.confronta.b) {
+    L.push("  confronta = { " + q(d.confronta.a) + ", " + q(d.confronta.b) + (d.confronta.se ? ", se = " + q(d.confronta.se) : "") + " },");
+  }
+  L.push("", "  -- una azione per turno", "  azioni = {");
+  for (const a of d.azioni) {
+    const head = fields(["nome = " + q(a.nome), a.chi ? "chi = " + q(a.chi) : "", a.se ? "se = " + q(a.se) : "", a.scopre ? "scopre = true" : ""]);
+    L.push("    { " + head + ",");
+    L.push("      effetti = " + q(a.effetti) + ",");
+    if (a.risposte.length) {
+      L.push("      risposte = {");
+      for (const r of a.risposte) L.push("        " + q(r) + ",");
+      L.push("      },");
+    }
+    if (a.dopo) L.push("      dopo = " + q(a.dopo) + ",");
+    L.push("    },");
+  }
+  L.push("  },", "", "  -- ogni regola è una meccanica con un nome", "  regole = {");
+  for (const r of d.regole) {
+    L.push("    { " + fields(["nome = " + q(r.nome), "quando = " + q(r.quando), r.se ? "se = " + q(r.se) : ""]) + ",");
+    L.push("      allora = " + q(r.allora) + "," + (r.testo ? " testo = " + q(r.testo) + "," : "") + " },");
+  }
+  L.push("  },", "",
+         "  -- 3 · NARRATIVA",
+         "  -- fonte: \"social\", \"chatbot\", \"persona\", \"corpo\" o \"altro\" · mostra = ciò che si vede · nasconde = ciò che c'è dietro",
+         "  eventi = {");
+  for (const e of d.eventi) {
+    L.push("    { " + fields(["fonte = " + q(e.fonte), e.chi ? "chi = " + q(e.chi) : "", e.se ? "se = " + q(e.se) : ""]) + ",");
+    L.push("      mostra = " + q(e.mostra) + ",");
+    if (e.nasconde) L.push("      nasconde = " + q(e.nasconde) + ",");
+    if (e.effetti || e.se_scopri) L.push("      " + fields([e.effetti ? "effetti = " + q(e.effetti) : "", e.se_scopri ? "se_scopri = " + q(e.se_scopri) : ""]) + ",");
+    L.push("    },");
+  }
+  L.push("  },", "", "  -- 4 · OPINIONI E FINALI", "  opinioni = {");
+  for (const o of d.opinioni) {
+    L.push("    { " + fields(["testo = " + q(o.testo), "nasce_se = " + q(o.nasce_se), o.cade_se ? "cade_se = " + q(o.cade_se) : ""]) + " },");
+  }
+  L.push("  },", "", "  -- vince il primo finale vero; l'ultimo, senza «se», vale sempre; subito = true chiude il gioco appena è vero", "  finali = {");
+  for (const f of d.finali) {
+    L.push("    { " + fields(["titolo = " + q(f.titolo), f.se ? "se = " + q(f.se) : "", f.subito && f.se ? "subito = true" : ""]) + ",");
+    L.push("      testo = " + q(f.testo) + " },");
+  }
+  L.push("  },");
+  if (d.capito || d.centrato) {
+    L.push("", "  -- 5 · SCAMBIO: cosa ha capito un altro gruppo, giocando",
+           "  capito = " + q(d.capito) + ",", "  centrato = " + q(d.centrato) + ",   -- \"sì\", \"in parte\" oppure \"no\"");
+  }
+  L.push("}");
+  return L.join("\n") + "\n";
+}
+
+// ------------------------------------------------------------------ catalogo di meccaniche
+const CATALOGO = [
+  { titolo: "Una risorsa che si consuma", temi: ["relazioni", "corpo"], messaggio: "Certe cose costano, e non si può fare tutto.",
+    spiega: "Una grandezza a pallini; un'azione la spende; una regola la ricarica piano.",
+    grandezze: [{ nome: "energia", inizio: 3, min: 0, max: 5, stile: "pallini" }],
+    azioni: [{ nome: "Fai la cosa difficile", se: "energia >= 1", effetti: "energia - 1", dopo: "Ti è costato." }],
+    regole: [{ nome: "Ci si ricarica, piano", quando: "fine turno", se: "energia < 2", allora: "energia + 1" }] },
+  { titolo: "Una ricompensa a caso", temi: ["social"], messaggio: "I like funzionano come una slot machine: non sai mai quanti ne arriveranno.",
+    spiega: "Un'azione dà un premio a caso: è il meccanismo che fa tornare a controllare.",
+    grandezze: [{ nome: "premi", inizio: 0, min: 0, max: 99999, stile: "numero" }, { nome: "ultimo_premio", inizio: 0, min: 0, max: 999, vista: "mai" }],
+    azioni: [{ nome: "Controlla le notifiche", effetti: "ultimo_premio = caso(0, 30), premi + ultimo_premio", dopo: "+{ultimo_premio}" }] },
+  { titolo: "L'abitudine", temi: ["social", "chatbot"], messaggio: "Ci si abitua, e ne serve sempre di più.",
+    spiega: "Ogni volta la stessa azione dà meno piacere, perché la soglia sale.",
+    grandezze: [{ nome: "piacere", livello: "intensita", inizio: 0, min: 0, max: 100 }, { nome: "soglia", inizio: 0, min: 0, max: 100, vista: "mai" }],
+    azioni: [{ nome: "Cerca la conferma", effetti: "piacere + max(0, 30 - soglia), soglia + 6" }],
+    regole: [{ nome: "Il piacere passa", quando: "fine turno", allora: "piacere - 10" }] },
+  { titolo: "Un'informazione nascosta", temi: ["male", "corpo", "social"], messaggio: "Ciò che si vede non è ciò che c'è.",
+    spiega: "Una grandezza che il giocatore non vede finché un'azione non la scopre. Usate anche il campo «nasconde» degli eventi.",
+    grandezze: [{ nome: "come_sta_davvero", livello: "vissuto", etichetta: "come sta davvero", inizio: -20, min: -100, max: 100, vista: "se scopri" }],
+    azioni: [{ nome: "Chiedi come sta davvero", scopre: true, effetti: "", dopo: "Ora lo sai." }],
+    regole: [{ nome: "Nessuno se ne accorge", quando: "fine turno", allora: "come_sta_davvero - 5" }] },
+  { titolo: "Un ciclo che si rinforza", temi: ["male"], messaggio: "Più ti chiudi, più è difficile uscire.",
+    spiega: "Due grandezze che si spingono a vicenda: da sole peggiorano, un'azione rompe il ciclo.",
+    grandezze: [{ nome: "isolamento", inizio: 20, min: 0, max: 100 }, { nome: "voglia_di_uscire", etichetta: "voglia di uscire", inizio: 60, min: 0, max: 100 }],
+    azioni: [{ nome: "Esci con qualcuno", se: "voglia_di_uscire >= 20", effetti: "isolamento - 15, voglia_di_uscire + 10" }],
+    regole: [{ nome: "Il ciclo", quando: "fine turno", allora: "voglia_di_uscire - isolamento / 10, isolamento + 5" }] },
+  { titolo: "Lo specchio", temi: ["chatbot"], messaggio: "Chi ti dà sempre ragione ti fa diventare di più ciò che sei già.",
+    spiega: "Un'azione spinge una grandezza nella direzione in cui va già: è la compiacenza dei chatbot.",
+    grandezze: [{ nome: "convinzione", inizio: -10, min: -100, max: 100 }],
+    azioni: [{ nome: "Chiedi conferma al chatbot", chi: "Bot", effetti: "convinzione + segno(convinzione) * 15",
+               risposte: ["Hai ragione tu.", "È proprio come dici.", "Nessuno ti capisce come me."] }] },
+  { titolo: "Il sollievo che svanisce", temi: ["chatbot", "male"], messaggio: "Ciò che consola subito, dopo pesa di più.",
+    spiega: "Un'azione fa stare meglio adesso; al turno dopo il sollievo se ne va e lascia un po' peggio.",
+    grandezze: [{ nome: "umore", livello: "vissuto", inizio: 0, min: -100, max: 100 }, { nome: "sollievo", inizio: 0, min: 0, max: 100, vista: "mai" }],
+    azioni: [{ nome: "Consolati subito", effetti: "sollievo = 15, umore + 15" }],
+    regole: [{ nome: "Il sollievo svanisce", quando: "inizio turno", se: "sollievo > 0", allora: "umore - sollievo * 1.3, sollievo = 0" }] },
+  { titolo: "Una scelta senza ritorno", temi: ["social", "corpo"], messaggio: "Online, certe cose non si possono ritirare.",
+    spiega: "Un'azione che si può fare una volta sola e che lascia un segno a ogni turno.",
+    grandezze: [{ nome: "fatto", inizio: 0, min: 0, max: 1, vista: "mai" }, { nome: "pensiero_fisso", etichetta: "pensiero fisso", inizio: 0, min: 0, max: 100 }],
+    azioni: [{ nome: "Premi invio", se: "fatto == 0", effetti: "fatto = 1", dopo: "Inviato. Non si torna indietro." }],
+    regole: [{ nome: "Resta", quando: "fine turno", se: "fatto == 1", allora: "pensiero_fisso + 10" }] },
+];
+function addPattern(p) {
+  const have = new Set(design.grandezze.map(g => g.nome));
+  const added = [];
+  for (const g of p.grandezze || []) {
+    if (have.has(g.nome)) continue;
+    design.grandezze.push(normGrandezza(g));
+    added.push("grandezza «" + (g.etichetta || g.nome) + "»");
+  }
+  for (const a of p.azioni || []) {
+    design.azioni.push({ nome: a.nome, chi: a.chi || "", effetti: a.effetti || "", se: a.se || "", scopre: !!a.scopre, risposte: (a.risposte || []).slice(), dopo: a.dopo || "" });
+    added.push("azione «" + a.nome + "»");
+  }
+  for (const r of p.regole || []) {
+    design.regole.push({ nome: r.nome, quando: r.quando, se: r.se || "", allora: r.allora, testo: r.testo || "" });
+    added.push("regola «" + r.nome + "»");
+  }
+  changed(); rerenderKeep();
+  toast("Carta aggiunta: " + added.length + " pezzi nuovi. Nei prossimi passi li adattate alla vostra storia.");
+}
+
+// ------------------------------------------------------------------ stato
+let design = null, lastPlayed = null, codeDirty = false;
+const $ = (id) => document.getElementById(id);
+function save() { try { localStorage.setItem("hospes-design-v2", JSON.stringify(design)); } catch (e) { } }
+function loadSaved() { try { const s = localStorage.getItem("hospes-design-v2"); if (s) return normalize(JSON.parse(s)); } catch (e) { } return null; }
+function changed() { save(); codeDirty = false; }
+let toastTimer = 0;
+function toast(t) {
+  let el = document.querySelector(".toast");
+  if (!el) { el = document.createElement("div"); el.className = "toast"; document.body.append(el); }
+  el.textContent = t; clearTimeout(toastTimer); toastTimer = setTimeout(() => el.remove(), 3200);
+}
+
+// ------------------------------------------------------------------ mattoni dell'interfaccia
+let uid = 0;
+function el(tag, attrs, ...kids) {
+  const n = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs || {})) {
+    if (v === null || v === undefined || v === false) continue;
+    if (k === "class") n.className = v; else if (k.startsWith("on")) n.addEventListener(k.slice(2), v); else n.setAttribute(k, v === true ? "" : v);
+  }
+  for (const k of kids) if (k !== null && k !== undefined && k !== false) n.append(k);
+  return n;
+}
+const lab = (g) => g.etichetta || g.nome.replace(/_/g, " ");
+function labOf(name) { const g = design.grandezze.find(x => x.nome === name); return g ? lab(g) : name; }
+function short(t, n) { t = String(t || "").replace(/\s+/g, " ").trim(); return t.length > n ? t.slice(0, n - 1) + "…" : t; }
+
+function fieldWrap(label, small, control, ...rest) {
+  const id = "f" + (++uid);
+  if (control && control.setAttribute && /^(INPUT|TEXTAREA|SELECT)$/.test(control.tagName)) control.id = id;
+  return el("div", { class: "field" }, el("label", { for: id }, label, small ? el("small", null, " · " + small) : null), control, ...rest);
+}
+function textField(label, obj, key, opts = {}) {
+  const input = opts.area ? el("textarea", { rows: opts.rows || 2 }) : el("input", { type: "text" });
+  if (opts.placeholder) input.placeholder = opts.placeholder;
+  input.value = obj[key];
+  input.addEventListener("input", () => { obj[key] = input.value; changed(); if (opts.onInput) opts.onInput(input.value); });
+  return fieldWrap(label, opts.small, input, opts.help ? el("p", { class: "help" }, opts.help) : null);
+}
+function numField(label, obj, key, small) {
+  const input = el("input", { type: "number", step: "any" });
+  input.value = obj[key];
+  input.addEventListener("input", () => { const v = parseFloat(input.value); if (isFinite(v)) { obj[key] = v; changed(); } });
+  return fieldWrap(label, small, input);
+}
+function selectField(label, value, options, onChange, small) {
+  const s = el("select");
+  for (const [v, t] of options) s.append(el("option", { value: v }, t));
+  s.value = value;
+  s.addEventListener("change", () => onChange(s.value));
+  return fieldWrap(label, small, s);
+}
+function segmented(label, value, options, onChange, small) {
+  const box = el("div", { class: "seg", role: "group", "aria-label": label });
+  const btns = options.map(([v, t]) => {
+    const b = el("button", { type: "button", "aria-pressed": String(v === value) }, t);
+    b.addEventListener("click", () => { btns.forEach(x => x.setAttribute("aria-pressed", String(x === b))); onChange(v); });
+    box.append(b); return b;
+  });
+  return el("div", { class: "field" }, el("label", null, label, small ? el("small", null, " · " + small) : null), box);
+}
+function check(label, obj, key) {
+  const c = el("input", { type: "checkbox" }); c.checked = !!obj[key];
+  c.addEventListener("change", () => { obj[key] = c.checked; changed(); });
+  return el("label", { class: "check" }, c, label);
+}
+function slider(label, obj, key, min, max, step) {
+  const out = el("output", null, String(obj[key]));
+  const r = el("input", { type: "range", min, max, step: step || 1 }); r.value = obj[key];
+  r.addEventListener("input", () => { obj[key] = Number(r.value); out.textContent = r.value; changed(); });
+  r.id = "f" + (++uid);
+  return el("div", { class: "field" }, el("label", { for: r.id }, label), el("div", { class: "slider" }, r, out));
+}
+function more(inUse, open, ...kids) {
+  return el("details", { class: "more", open: open || null },
+    el("summary", null, "Altre opzioni" + (inUse ? " · " + inUse + " in uso" : "")), ...kids);
+}
+function twoStep(label, confirmLabel, fn, cls) {
+  let armed = false;
+  const b = el("button", { class: cls || "btn", type: "button" }, label);
+  b.addEventListener("click", () => {
+    if (!armed) { armed = true; b.textContent = confirmLabel; setTimeout(() => { armed = false; b.textContent = label; }, 5000); return; }
+    armed = false; b.textContent = label; fn();
+  });
+  return b;
+}
+
+// ------------------------------------------------------------------ effetti e condizioni con i menu
+const OPS = [["+", "aumenta di"], ["-", "diminuisce di"], ["=", "diventa"], ["*", "si moltiplica per"], ["/", "si divide per"]];
+const OPS_SHORT = { "+": " +", "-": " −", "=": " = ", "*": " ×", "/": " ÷" };
+const CMPS = [[">", "è più di"], [">=", "è almeno"], ["<", "è meno di"], ["<=", "è al massimo"], ["==", "è uguale a"], ["!=", "è diversa da"]];
+const NAME_RE = "[\\p{L}_][\\p{L}\\p{N}_]*";
+const EFF_RE = new RegExp("^\\s*(" + NAME_RE + ")\\s*([+\\-*/=])\\s*(.+?)\\s*$", "u");
+const CMP_RE = new RegExp("^\\s*(" + NAME_RE + ")\\s*(>=|<=|==|!=|~=|>|<|=)\\s*(.+?)\\s*$", "u");
+
+function splitTopCommas(s) {
+  const parts = []; let depth = 0, cur = "";
+  for (const c of s) {
+    if (c === "(") depth++; else if (c === ")") depth--;
+    if (c === "," && depth === 0) { parts.push(cur); cur = ""; } else cur += c;
+  }
+  parts.push(cur);
+  return parts;
+}
+// "a + 1, b = caso(1, 3)" → righe; null se la formula è troppo libera per i menu
+function parseEffects(text) {
+  if (!text || !String(text).trim()) return [];
+  const rows = [];
+  for (const part of splitTopCommas(String(text))) {
+    const m = EFF_RE.exec(part);
+    if (!m) return null;
+    rows.push({ name: m[1].toLowerCase(), op: m[2], value: m[3] });
+  }
+  return rows;
+}
+function parseCond(text) {
+  if (!text || !String(text).trim()) return { rows: [], join: "e" };
+  const parts = String(text).split(/\s+(e|o|and|or)\s+/i);
+  const joins = new Set(), rows = [];
+  for (let i = 0; i < parts.length; i++) {
+    if (i % 2) { joins.add(/^(e|and)$/i.test(parts[i]) ? "e" : "o"); continue; }
+    const m = CMP_RE.exec(parts[i]);
+    if (!m) return null;
+    rows.push({ name: m[1].toLowerCase(), cmp: m[2] === "=" ? "==" : m[2] === "~=" ? "!=" : m[2], value: m[3] });
+  }
+  if (joins.size > 1) return null;
+  return { rows, join: joins.has("o") ? "o" : "e" };
+}
+function effSummary(text) {
+  const rows = parseEffects(text);
+  if (rows === null) return text;
+  if (!rows.length) return "non cambia niente";
+  return rows.map(r => labOf(r.name) + OPS_SHORT[r.op] + r.value).join(" · ");
+}
+function nameOptions(current, withTurn) {
+  const opts = design.grandezze.map(g => [g.nome, lab(g)]);
+  if (withTurn) opts.push(["turno", "il turno"]);
+  if (current && !opts.some(o => o[0] === current)) opts.push([current, current + " (non esiste)"]);
+  return opts;
+}
+function mkSelect(options, value, aria, onChange) {
+  const s = el("select", { "aria-label": aria });
+  for (const [v, t] of options) s.append(el("option", { value: v }, t));
+  s.value = value;
+  s.addEventListener("change", () => onChange(s.value));
+  return s;
+}
+function mkValue(value, onInput) {
+  const i = el("input", { type: "text", class: "code", "aria-label": "valore", autocapitalize: "off", autocorrect: "off", spellcheck: "false", placeholder: "10" });
+  i.value = value;
+  i.addEventListener("input", () => onInput(i.value));
+  return i;
+}
+
+// Un effetto si legge come una frase: [coraggio] [diminuisce di] [1]
+function effectsField(label, obj, key, opts = {}) {
+  const box = el("div", { class: "builder" });
+  let rows = parseEffects(obj[key]);
+  let raw = rows === null;
+  const msg = el("p", { class: "err", role: "status" });
+  const validate = () => { const e = checkExpr(obj[key], "eff"); msg.textContent = e ? "Da sistemare: " + e : ""; };
+  const commit = () => {
+    if (!raw) obj[key] = rows.map(r => r.name + " " + r.op + " " + (r.value.trim() || "0")).join(", ");
+    validate(); changed();
+  };
+  const render = () => {
+    box.innerHTML = "";
+    box.append(el("label", null, label, opts.small ? el("small", null, " · " + opts.small) : null));
+    if (raw) {
+      const t = el("textarea", { class: "code", rows: 2, autocapitalize: "off", autocorrect: "off", spellcheck: "false", "aria-label": label });
+      t.value = obj[key];
+      t.addEventListener("input", () => { obj[key] = t.value; validate(); changed(); });
+      box.append(t, el("p", { class: "help" }, "Esempio: like + 10, coraggio - 1, umore = 0"),
+        el("button", { class: "linkbtn", type: "button", onclick: () => {
+          const r = parseEffects(obj[key]);
+          if (r === null) { msg.textContent = "Questa formula non si può mostrare con i menu: correggetela qui."; return; }
+          rows = r; raw = false; render();
+        } }, "usa i menu"));
+    } else {
+      if (!design.grandezze.length) box.append(el("p", { class: "help" }, "Prima create almeno una grandezza (passo «Grandezze»)."));
+      else if (!rows.length) box.append(el("p", { class: "help" }, opts.empty || "Per ora non cambia niente."));
+      rows.forEach((r, i) => {
+        box.append(el("div", { class: "brow" },
+          el("div", { class: "b1" },
+            mkSelect(nameOptions(r.name), r.name, "grandezza", v => { r.name = v; commit(); }),
+            el("button", { class: "x", type: "button", "aria-label": "Togli questo effetto", onclick: () => { rows.splice(i, 1); commit(); render(); } }, "×")),
+          el("div", { class: "b2" },
+            mkSelect(OPS, r.op, "cosa succede", v => { r.op = v; commit(); }),
+            mkValue(r.value, v => { r.value = v; commit(); }))));
+      });
+      if (design.grandezze.length) {
+        box.append(el("button", { class: "btn add", type: "button", onclick: () => {
+          rows.push({ name: design.grandezze[0].nome, op: "+", value: "10" }); commit(); render();
+        } }, "+ Aggiungi un effetto"));
+        if (rows.length) box.append(el("p", { class: "help" }, "Valore: un numero, oppure caso(1, 10) per un numero a caso."));
+      }
+      box.append(el("button", { class: "linkbtn", type: "button", onclick: () => { raw = true; render(); } }, "scrivi la formula"));
+    }
+    box.append(msg);
+    validate();
+  };
+  render();
+  return box;
+}
+
+// Una condizione si legge come una frase: [coraggio] [è almeno] [1]
+function condField(label, obj, key, opts = {}) {
+  const box = el("div", { class: "builder" });
+  let parsed = parseCond(obj[key]);
+  let raw = parsed === null;
+  let rows = raw ? [] : parsed.rows, join = raw ? "e" : parsed.join;
+  const msg = el("p", { class: "err", role: "status" });
+  const validate = () => { const e = checkExpr(obj[key], "cond"); msg.textContent = e ? "Da sistemare: " + e : ""; };
+  const commit = () => {
+    if (!raw) obj[key] = rows.map(r => r.name + " " + r.cmp + " " + (r.value.trim() || "0")).join(" " + join + " ");
+    validate(); changed();
+  };
+  const render = () => {
+    box.innerHTML = "";
+    box.append(el("label", null, label, opts.small ? el("small", null, " · " + opts.small) : null));
+    if (raw) {
+      const t = el("input", { type: "text", class: "code", autocapitalize: "off", autocorrect: "off", spellcheck: "false", "aria-label": label });
+      t.value = obj[key];
+      t.addEventListener("input", () => { obj[key] = t.value; validate(); changed(); });
+      box.append(t, el("p", { class: "help" }, "Esempio: fiducia > 50 e coraggio >= 1"),
+        el("button", { class: "linkbtn", type: "button", onclick: () => {
+          const p = parseCond(obj[key]);
+          if (p === null) { msg.textContent = "Questa condizione non si può mostrare con i menu: correggetela qui."; return; }
+          rows = p.rows; join = p.join; raw = false; render();
+        } }, "usa i menu"));
+    } else {
+      if (!rows.length) box.append(el("p", { class: "help" }, opts.empty || "Sempre: nessuna condizione."));
+      rows.forEach((r, i) => {
+        box.append(el("div", { class: "brow" },
+          el("div", { class: "b1" },
+            mkSelect(nameOptions(r.name, true), r.name, "grandezza", v => { r.name = v; commit(); }),
+            el("button", { class: "x", type: "button", "aria-label": "Togli questa condizione", onclick: () => { rows.splice(i, 1); commit(); render(); } }, "×")),
+          el("div", { class: "b2" },
+            mkSelect(CMPS, r.cmp, "confronto", v => { r.cmp = v; commit(); }),
+            mkValue(r.value, v => { r.value = v; commit(); }))));
+      });
+      if (rows.length > 1) {
+        const seg = segmented("Devono essere vere", join, [["e", "tutte"], ["o", "almeno una"]], v => { join = v; commit(); });
+        box.append(seg);
+      }
+      box.append(el("button", { class: "btn add", type: "button", onclick: () => {
+        const first = design.grandezze[0];
+        rows.push({ name: first ? first.nome : "turno", cmp: ">=", value: "1" }); commit(); render();
+      } }, "+ Aggiungi una condizione"));
+      box.append(el("button", { class: "linkbtn", type: "button", onclick: () => { raw = true; render(); } }, "scrivi la formula"));
+    }
+    box.append(msg);
+    validate();
+  };
+  render();
+  return box;
+}
+
+// ------------------------------------------------------------------ nomi delle grandezze: si scrive l'etichetta, il nome segue
+function slug(text) {
+  let s = String(text).toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[^a-z0-9_]+/g, "_").replace(/^_+|_+$/g, "");
+  if (/^[0-9]/.test(s)) s = "g_" + s;
+  return s;
+}
+function uniqueSlug(text, self) {
+  let base = slug(text) || "grandezza";
+  if (NOMI_VIETATI.has(base) || base in FUNZIONI) base += "_";
+  const taken = new Set(design.grandezze.filter(g => g !== self).map(g => g.nome));
+  let s = base, n = 2;
+  while (taken.has(s)) s = base + "_" + (n++);
+  return s;
+}
+function isAutoName(g) {
+  const s = slug(lab(g));
+  return g.nome === s || (g.nome.startsWith(s + "_") && /^\d+$/.test(g.nome.slice(s.length + 1)));
+}
+function tidyGrandezza(g) {
+  if (g.stile === autoStile(g)) g.stile = "";
+  if (g.etichetta === g.nome.replace(/_/g, " ")) g.etichetta = "";
+}
+function forEachText(d, fn) {   // fn(contenitore, chiave, èFormula)
+  const F = (o, keys) => keys.forEach(k => fn(o, k, true));
+  const T = (o, keys) => keys.forEach(k => fn(o, k, false));
+  d.azioni.forEach(a => { F(a, ["effetti", "se"]); T(a, ["nome", "dopo", "chi"]); a.risposte.forEach((_, i) => fn(a.risposte, i, false)); });
+  d.regole.forEach(r => { F(r, ["se", "allora"]); T(r, ["testo"]); });
+  d.eventi.forEach(e => { F(e, ["effetti", "se_scopri", "se"]); T(e, ["chi", "mostra", "nasconde"]); });
+  d.opinioni.forEach(o => { F(o, ["nasce_se", "cade_se"]); T(o, ["testo"]); });
+  d.finali.forEach(x => { F(x, ["se"]); T(x, ["titolo", "testo"]); });
+  F(d.confronta, ["se"]); T(d, ["presentazione"]);
+}
+const WORD_RE = new RegExp(NAME_RE, "gu");
+function renameGrandezza(oldN, newN) {
+  if (oldN === newN) return;
+  forEachText(design, (o, k, isFormula) => {
+    const v = o[k]; if (!v) return;
+    o[k] = isFormula ? v.replace(WORD_RE, w => w.toLowerCase() === oldN ? newN : w) : v.split("{" + oldN + "}").join("{" + newN + "}");
+  });
+  if (design.confronta.a === oldN) design.confronta.a = newN;
+  if (design.confronta.b === oldN) design.confronta.b = newN;
+}
+function countUses(name) {
+  let n = 0;
+  forEachText(design, (o, k, isFormula) => {
+    const v = o[k]; if (!v) return;
+    if (isFormula) { if ((v.match(WORD_RE) || []).some(w => w.toLowerCase() === name)) n++; }
+    else if (v.includes("{" + name + "}")) n++;
+  });
+  if (design.confronta.a === name || design.confronta.b === name) n++;
+  return n;
+}
+
+// ------------------------------------------------------------------ cosa c'è da sistemare
+function problemsOf(d) {
+  const out = [];
+  const known = new Set(["turno", "turni", ...d.grandezze.map(g => g.nome)]);
+  const chk = (t, mode, step, list, index, where) => {
+    if (!t || !String(t).trim()) return;
+    try {
+      const { names } = exprParse(t, mode);
+      const miss = names.filter(n => !known.has(n));
+      if (miss.length) out.push({ step, list, index, msg: where + ": la grandezza «" + miss[0] + "» non esiste" });
+    } catch (e) { out.push({ step, list, index, msg: where + ": " + e.message }); }
+  };
+  const seen = new Set();
+  d.grandezze.forEach((g, i) => {
+    if (!/^[\p{L}_][\p{L}\p{N}_]*$/u.test(g.nome) || NOMI_VIETATI.has(g.nome)) out.push({ step: "grandezze", list: "grandezze", index: i, msg: "grandezza " + (i + 1) + ": il nome «" + g.nome + "» non va bene" });
+    else if (seen.has(g.nome)) out.push({ step: "grandezze", list: "grandezze", index: i, msg: "due grandezze si chiamano «" + g.nome + "»" });
+    seen.add(g.nome);
+  });
+  if (!d.azioni.length) out.push({ step: "azioni", msg: "non c'è nessuna azione" });
+  if (!d.eventi.length) out.push({ step: "eventi", msg: "non c'è nessun evento" });
+  d.azioni.forEach((a, i) => { chk(a.effetti, "eff", "azioni", "azioni", i, "azione «" + a.nome + "»"); chk(a.se, "cond", "azioni", "azioni", i, "azione «" + a.nome + "» (solo se)"); });
+  d.regole.forEach((r, i) => { chk(r.allora, "eff", "regole", "regole", i, "regola «" + r.nome + "»"); chk(r.se, "cond", "regole", "regole", i, "regola «" + r.nome + "» (solo se)"); });
+  d.eventi.forEach((e, i) => { chk(e.effetti, "eff", "eventi", "eventi", i, "evento " + (i + 1)); chk(e.se_scopri, "eff", "eventi", "eventi", i, "evento " + (i + 1) + " (quando si scopre)"); chk(e.se, "cond", "eventi", "eventi", i, "evento " + (i + 1) + " (compare se)"); });
+  d.opinioni.forEach((o, i) => { chk(o.nasce_se, "cond", "finali", "opinioni", i, "opinione " + (i + 1)); chk(o.cade_se, "cond", "finali", "opinioni", i, "opinione " + (i + 1)); });
+  d.finali.forEach((f, i) => chk(f.se, "cond", "finali", "finali", i, "finale " + (i + 1)));
+  chk(d.confronta.se, "cond", "grandezze", "confronto", undefined, "confronto");
+  return out;
+}
+
+// ------------------------------------------------------------------ il percorso: 4 fasi, un compito per schermata
+const FASI = ["Messaggio", "Meccaniche", "Narrativa", "Prova"];
+const STEPS = [
+  { id: "messaggio", fase: 0, nome: "Messaggio", q: "Cosa volete far capire a chi gioca?", aiuto: "Una frase che pensate davvero. Il gioco la mostra solo alla fine: prima la si deve sentire giocando." },
+  { id: "carte", fase: 1, nome: "Carte", q: "Quale meccanica fa sentire il vostro messaggio?", aiuto: "Scegliete una o due carte: aggiungono pezzi già funzionanti, che poi cambierete. Potete anche saltare questo passo." },
+  { id: "grandezze", fase: 1, nome: "Grandezze", q: "Cosa cambia nel vostro mondo?", aiuto: "Like, coraggio, fiducia, solitudine… Anche ciò che non si vede." },
+  { id: "azioni", fase: 1, nome: "Azioni", q: "Cosa può fare chi gioca?", aiuto: "Una scelta per turno, al massimo 6. Ogni azione cambia qualche grandezza." },
+  { id: "regole", fase: 1, nome: "Regole", q: "Cosa succede da solo, a ogni turno?", aiuto: "Le regole agiscono senza che nessuno scelga: il tempo che calma, l'abitudine, un sollievo che svanisce. Sono facoltative." },
+  { id: "eventi", fase: 2, nome: "Eventi", q: "Cosa succede durante la storia?", aiuto: "Ogni turno arriva un evento. Mostra una cosa e può nasconderne un'altra." },
+  { id: "finali", fase: 2, nome: "Finali", q: "Come può finire?", aiuto: "Il finale dipende da come si è giocato. Le opinioni sono ciò che il protagonista finisce per credere." },
+  { id: "controllo", fase: 3, nome: "Controllo", q: "Il gioco è pronto per essere giocato?", aiuto: "Un'occhiata a cosa c'è, cosa manca e cosa racconta del vostro protagonista." },
+  { id: "scambio", fase: 3, nome: "Scambio", q: "Gli altri capiscono il vostro messaggio?", aiuto: "Un gioco dice qualcosa solo se chi lo gioca lo capisce da solo. Qui si scopre." },
+];
+const KINDS = { grandezze: "Grandezza", azioni: "Azione", regole: "Regola", eventi: "Evento", opinioni: "Opinione", finali: "Finale" };
+const FONTI_OPT = Object.entries(FONTI);
+
+const wiz = { step: 0, started: false, edit: null, card: -1, backY: 0, seen: {} };
+function saveWiz() { try { localStorage.setItem("hospes-wiz", JSON.stringify({ step: wiz.step, started: wiz.started, seen: wiz.seen })); } catch (e) { } }
+function loadWiz() {
+  try {
+    const s = JSON.parse(localStorage.getItem("hospes-wiz") || "null");
+    if (s) { wiz.step = Math.max(0, Math.min(STEPS.length - 1, s.step | 0)); wiz.started = !!s.started; wiz.seen = (s.seen && typeof s.seen === "object") ? s.seen : {}; }
+  } catch (e) { }
+}
+let EXAMPLE_JSON = "", BLANK_JSON = "";
+const isExample = () => JSON.stringify(design) === EXAMPLE_JSON;
+const isBlank = () => JSON.stringify(design) === BLANK_JSON;
+
+function stepInfo(probs) {
+  const d = design, by = {};
+  for (const s of STEPS) by[s.id] = { err: probs.filter(p => p.step === s.id).length, ok: true };
+  by.messaggio.ok = !!d.messaggio.trim() && !d.messaggio.includes("…");
+  by.grandezze.ok = d.grandezze.length > 0;
+  by.azioni.ok = d.azioni.length > 0;
+  by.eventi.ok = d.eventi.length > 0;
+  by.finali.ok = d.finali.length > 0;
+  by.controllo.ok = probs.length === 0;
+  by.scambio.ok = !!d.capito.trim();
+  return by;
+}
+function go(i) {
+  wiz.step = Math.max(0, Math.min(STEPS.length - 1, i)); wiz.edit = null; wiz.card = -1;
+  saveWiz(); renderWizard(); window.scrollTo(0, 0);
+}
+function goId(id) { go(STEPS.findIndex(s => s.id === id)); }
+function openEdit(e) { wiz.backY = window.scrollY; wiz.edit = e; renderWizard(); window.scrollTo(0, 0); }
+function closeEdit() { wiz.edit = null; renderWizard(); window.scrollTo(0, wiz.backY || 0); }
+function rerenderKeep() { const y = window.scrollY; renderWizard(); window.scrollTo(0, y); }
+function openProblem(p) {
+  wiz.step = STEPS.findIndex(s => s.id === p.step); wiz.backY = 0; saveWiz();
+  wiz.edit = p.list ? { kind: p.list, index: p.index } : null;
+  renderWizard(); window.scrollTo(0, 0);
+}
+
+function renderWizard() {
+  const head = $("wizHead"), f = $("form"), bar = $("wizBar");
+  head.innerHTML = ""; f.innerHTML = ""; bar.innerHTML = "";
+  if (!wiz.started) return renderStart(f);
+  const probs = problemsOf(design);
+  if (wiz.edit) return renderEditor(head, f, bar, probs);
+  const info = stepInfo(probs), cur = STEPS[wiz.step];
+  if (!wiz.seen[cur.id]) { wiz.seen[cur.id] = true; saveWiz(); }
+  // fasi
+  const phases = el("div", { class: "phases" });
+  FASI.forEach((name, i) => {
+    const steps = STEPS.filter(s => s.fase === i);
+    const on = cur.fase === i, err = steps.some(s => info[s.id].err);
+    const done = !err && steps.every(s => info[s.id].ok && wiz.seen[s.id]);   // «fatto» = ci siete passati e non manca niente
+    phases.append(el("button", { class: "phase" + (err ? " err" : done ? " done" : "") + (on ? " on" : ""), type: "button",
+      "aria-current": on ? "step" : null, "aria-label": name + (err ? ": da sistemare" : done ? ": fatto" : ""), onclick: () => goId(steps[0].id) },
+      el("span", { class: "num" }, err ? "!" : (done && !on) ? "✓" : String(i + 1)), el("span", null, name)));
+  });
+  head.append(phases);
+  // passi della fase
+  const sibs = STEPS.filter(s => s.fase === cur.fase);
+  if (sibs.length > 1) {
+    head.append(el("div", { class: "pills" }, ...sibs.map(s =>
+      el("button", { class: "pill" + (s === cur ? " on" : "") + (info[s.id].err ? " err" : ""), type: "button",
+        "aria-current": s === cur ? "step" : null, onclick: () => goId(s.id) }, (info[s.id].err ? "! " : "") + s.nome))));
+  }
+  head.append(el("h2", { class: "q" }, cur.q), el("p", { class: "qhelp" }, cur.aiuto));
+  SCREENS[cur.id](f, probs, info);
+  // barra in basso, a portata di pollice
+  const i = wiz.step, last = i === STEPS.length - 1;
+  bar.append(
+    el("button", { class: "btn", type: "button", disabled: i === 0 ? true : null, onclick: () => go(i - 1) }, "‹ Indietro"),
+    el("button", { class: "btn" + (last ? " main grow" : ""), type: "button", onclick: () => show("gioca") }, "▶ Prova"));
+  if (!last) bar.append(el("button", { class: "btn main grow next", type: "button", onclick: () => go(i + 1) }, "Avanti: " + STEPS[i + 1].nome + " ›"));
+}
+
+// ---------- schermata di partenza
+function renderStart(f) {
+  const d = design;
+  const fresh = () => { design = normalize(parseLua(BLANK_LUA)); changed(); wiz.started = true; wiz.seen = {}; go(0); toast("Gioco nuovo pronto. Si parte dal messaggio."); };
+  const example = () => { design = normalize(parseLua(EXAMPLE_LUA)); changed(); wiz.started = true; wiz.seen = {}; go(0); };
+  const cont = () => { wiz.started = true; saveWiz(); renderWizard(); window.scrollTo(0, 0); };
+  const big = (title, sub, fn, main) => el("button", { class: "btn big" + (main ? " main" : ""), type: "button", onclick: fn }, title, el("small", null, sub));
+  f.append(el("h2", { class: "q" }, "Da dove partite?"));
+  if (isExample()) {
+    f.append(el("p", { class: "qhelp" }, "Adesso è caricato l'esempio «" + d.titolo + "». Per il vostro gioco si parte da zero: l'esempio resta sempre disponibile."),
+      big("Inizia un gioco nuovo", "Un gioco quasi vuoto, da costruire passo per passo", fresh, true),
+      big("Guarda com'è fatto l'esempio", "Per capire come un messaggio diventa regole e storia", cont, false));
+  } else {
+    f.append(el("p", { class: "qhelp" }, "State lavorando su «" + d.titolo + "»."),
+      big("Continua «" + short(d.titolo, 28) + "»", "Riprendete da dove eravate", cont, true));
+    if (isBlank()) {    // niente da perdere: nessuna conferma
+      f.append(big("Carica l'esempio", "Per vedere com'è fatto un gioco finito", example, false));
+    } else {
+      f.append(twoStep("Inizia un gioco nuovo", "Sicuri? Il gioco attuale si perde: tocca ancora", fresh, "btn big"),
+        twoStep("Carica l'esempio", "Sicuri? Il gioco attuale si perde: tocca ancora", example, "btn big"),
+        el("p", { class: "help" }, "Prima di cambiare gioco potete salvarlo: scheda «Condividi», «Copia il design»."));
+    }
+  }
+}
+
+// ---------- righe delle liste
+function rowCard(title, summary, onOpen, opts = {}) {
+  const main = el("button", { class: "rowmain", type: "button", onclick: onOpen },
+    el("span", { class: "rtitle" }, opts.chip ? el("span", { class: "chip " + opts.chip[0] }, opts.chip[1]) : null, title || "(senza nome)"),
+    summary ? el("span", { class: "rsum" }, summary) : null,
+    opts.err ? el("span", { class: "rerr" }, "! da sistemare") : null,
+    el("span", { class: "chev", "aria-hidden": "true" }, "›"));
+  const card = el("div", { class: "rowcard" + (opts.err ? " haserr" : "") }, main);
+  if (opts.move) {
+    const [list, i] = opts.move;
+    const mv = (dir) => { const j = i + dir; [list[i], list[j]] = [list[j], list[i]]; changed(); rerenderKeep(); };
+    card.append(el("button", { class: "mv", type: "button", "aria-label": "Sposta su", disabled: i === 0 ? true : null, onclick: () => mv(-1) }, "↑"),
+                el("button", { class: "mv", type: "button", "aria-label": "Sposta giù", disabled: i === list.length - 1 ? true : null, onclick: () => mv(1) }, "↓"));
+  }
+  return card;
+}
+function listOf(f, kind, probs, describe, opts = {}) {
+  const list = design[kind];
+  list.forEach((item, i) => {
+    const [title, summary, chip] = describe(item, i);
+    f.append(rowCard(title, summary, () => openEdit({ kind, index: i }),
+      { chip, err: probs.some(p => p.list === kind && p.index === i), move: opts.move ? [list, i] : null }));
+  });
+  if (!list.length && opts.empty) f.append(el("p", { class: "hint" }, opts.empty));
+}
+function addButton(label, kind, make) {
+  return el("button", { class: "btn add", type: "button", onclick: () => { design[kind].push(make()); changed(); openEdit({ kind, index: design[kind].length - 1, fresh: true }); } }, label);
+}
+const VISTA_SHORT = { "sempre": "si vede", "se scopri": "nascosta finché non si scopre", "mai": "dietro le quinte" };
+
+// ---------- le schermate, una per passo
+const SCREENS = {
+  messaggio(f) {
+    const d = design;
+    const msg = el("textarea", { rows: 3, placeholder: "Scrivetelo in una frase." });
+    msg.value = d.messaggio;
+    msg.addEventListener("input", () => { d.messaggio = msg.value; changed(); });
+    const stems = el("div", { class: "stems" });
+    const renderStems = () => {
+      stems.innerHTML = "";
+      (SPUNTI[d.tema] || SPUNTI[""]).forEach(t => stems.append(el("button", { class: "btn", type: "button", onclick: () => {
+        const cur = msg.value.trim();
+        if (cur && !SPUNTI_ALL.has(cur)) { toast("Avete già un messaggio: cancellatelo, se volete partire da uno spunto."); return; }
+        msg.value = t; d.messaggio = t; changed(); msg.focus();
+      } }, t)));
+    };
+    renderStems();
+    f.append(
+      segmented("Di cosa parla", d.tema, TEMI, v => { d.tema = v; changed(); renderStems(); }, "i temi degli incontri"),
+      fieldWrap("Il vostro messaggio", null, msg),
+      el("details", { class: "tip", open: d.messaggio.trim() ? null : true }, el("summary", null, "Uno spunto: una frase da finire"), stems),
+      el("details", { class: "tip" }, el("summary", null, "Come si riconosce un buon messaggio?"),
+        el("ul", null,
+          el("li", null, "È un'idea, non un divieto: «i like non dicono chi sei», non «non usate i social»."),
+          el("li", null, "Lo pensate davvero, e qualcuno potrebbe non essere d'accordo."),
+          el("li", null, "Sta in una frase."))),
+      textField("Titolo del gioco", d, "titolo"),
+      textField("Chi siete", d, "autori", { small: "numero del gruppo e classe, niente cognomi" }),
+      more(d.presentazione ? 1 : 0, false,
+        textField("Presentazione", d, "presentazione", { area: true, rows: 2, small: "cosa legge chi inizia a giocare" })),
+      el("button", { class: "linkbtn", type: "button", onclick: () => { wiz.started = false; saveWiz(); renderWizard(); window.scrollTo(0, 0); } }, "Cambia gioco (nuovo, oppure l'esempio)"));
+  },
+
+  carte(f) {
+    const have = new Set(design.grandezze.map(g => g.nome));
+    const fits = (p) => !!design.tema && p.temi.includes(design.tema);
+    const order = CATALOGO.map((_, i) => i).sort((a, b) => (fits(CATALOGO[b]) - fits(CATALOGO[a])) || (a - b));
+    order.forEach((i) => {
+      const p = CATALOGO[i];
+      const added = (p.grandezze || []).length > 0 && p.grandezze.every(g => have.has(g.nome));
+      const open = wiz.card === i;
+      const card = el("div", { class: "card pattern" },
+        el("button", { class: "cardbtn", type: "button", "aria-expanded": String(open), onclick: () => { wiz.card = open ? -1 : i; rerenderKeep(); } },
+          el("span", { class: "rtitle" }, p.titolo, added ? el("span", { class: "chip ok" }, "✓ nel gioco") : null),
+          fits(p) ? el("span", { class: "chip rec" }, "adatta al vostro tema") : null,
+          el("span", { class: "pmsg" }, "«" + p.messaggio + "»")));
+      if (open) {
+        const parts = [...(p.grandezze || []).map(g => "grandezza «" + (g.etichetta || g.nome.replace(/_/g, " ")) + "»"),
+                       ...(p.azioni || []).map(a => "azione «" + a.nome + "»"), ...(p.regole || []).map(r => "regola «" + r.nome + "»")];
+        card.append(el("p", { class: "pcont" }, p.spiega), el("p", { class: "pcont" }, "Aggiunge: " + parts.join(", ") + "."),
+          el("button", { class: "btn main add", type: "button", disabled: added ? true : null, style: "margin-top:10px", onclick: () => addPattern(p) },
+            added ? "Già nel gioco" : "Aggiungi al gioco"));
+      }
+      f.append(card);
+    });
+  },
+
+  grandezze(f, probs) {
+    f.append(el("details", { class: "tip" }, el("summary", null, "La scala: cinque parole per ciò che si prova"),
+      el("ul", null,
+        el("li", null, el("b", null, "Intensità"), ": la scossa. Sale di colpo, cala da sola."),
+        el("li", null, el("b", null, "Vissuto"), ": come ci si sente davvero, dentro."),
+        el("li", null, el("b", null, "Emozione"), ": ciò che si mostra agli altri. Può essere vero o recitato."),
+        el("li", null, el("b", null, "Sentimento"), ": ciò che dura. Come ci si vede, cosa si prova per qualcuno."),
+        el("li", null, el("b", null, "Opinione"), ": ciò che si finisce per credere. Si crea nel passo «Finali»."))));
+    const all = design.grandezze, back = el("details", { class: "more" });
+    let nBack = 0, backErr = false;
+    all.forEach((g, i) => {
+      const err = probs.some(p => p.list === "grandezze" && p.index === i);
+      const row = rowCard(lab(g), "parte da " + nm(g.inizio) + " · " + VISTA_SHORT[g.vista], () => openEdit({ kind: "grandezze", index: i }), { err, chip: g.livello ? ["lvl", LIVELLO_NOME[g.livello]] : null });
+      if (g.vista === "mai") { back.append(row); nBack++; backErr = backErr || err; } else f.append(row);
+    });
+    if (!all.length) f.append(el("p", { class: "hint" }, "Nessuna grandezza. Senza grandezze il gioco non ha niente da cambiare."));
+    if (nBack) {
+      back.prepend(el("summary", null, (backErr ? "! " : "") + "Dietro le quinte (" + nBack + "): contano e ricordano, ma chi gioca non le vede"));
+      if (backErr || wiz.backOpen) back.setAttribute("open", "");
+      back.addEventListener("toggle", () => { wiz.backOpen = back.open; });
+    }
+    f.append(addButton("+ Aggiungi una grandezza", "grandezze", () => {
+      const g = { nome: "", etichetta: "", spiega: "", inizio: 0, min: 0, max: 100, vista: "sempre", stile: "" };
+      g.nome = uniqueSlug("nuova grandezza", g); return g;
+    }));
+    if (nBack) f.append(back);
+    const c = design.confronta, on = c.a && c.b;
+    f.append(el("h3", null, "Confronto ", el("small", null, "· facoltativo")),
+      rowCard(on ? labOf(c.a) + " ↔ " + labOf(c.b) : "Nessun confronto", "una linea mostra la distanza tra due grandezze",
+        () => openEdit({ kind: "confronto" }), { err: probs.some(p => p.list === "confronto") }));
+  },
+
+  azioni(f, probs) {
+    listOf(f, "azioni", probs, a => [a.nome, effSummary(a.effetti) + (a.scopre ? " · scopre" : "") + (a.se ? " · solo se…" : "")],
+      { move: true, empty: "Nessuna azione: chi gioca non può fare niente." });
+    if (design.azioni.length > 6) f.append(el("p", { class: "err" }, "Il gioco mostra solo le prime 6 azioni."));
+    f.append(addButton("+ Aggiungi un'azione", "azioni", () => ({ nome: "Nuova azione", chi: "", effetti: "", se: "", scopre: false, risposte: [], dopo: "" })));
+  },
+
+  regole(f, probs) {
+    listOf(f, "regole", probs, r => [r.nome, (r.quando === "inizio turno" ? "a inizio turno" : "a fine turno") + " · " + effSummary(r.allora)],
+      { empty: "Nessuna regola: tra un turno e l'altro non succede niente da solo." });
+    f.append(addButton("+ Aggiungi una regola", "regole", () => ({ nome: "Nuova regola", quando: "fine turno", se: "", allora: "", testo: "" })));
+  },
+
+  eventi(f, probs) {
+    const d = design;
+    f.append(rowCard("Protagonista: " + d.protagonista, d.turni + " turni · eventi " + d.ordine, () => openEdit({ kind: "storia" })));
+    f.append(el("h3", null, "Eventi ", el("small", null, "· " + d.eventi.length + " per " + d.turni + " turni")));
+    listOf(f, "eventi", probs, e => [short(e.mostra, 60) || "(vuoto)", (e.chi ? e.chi + " · " : "") + (e.nasconde ? "nasconde qualcosa" : "non nasconde niente"), [e.fonte, FONTI[e.fonte]]],
+      { move: true });
+    f.append(addButton("+ Aggiungi un evento", "eventi", () => ({ fonte: "persona", chi: "", mostra: "", nasconde: "", effetti: "", se_scopri: "", se: "" })));
+  },
+
+  finali(f, probs) {
+    f.append(el("h3", null, "Finali ", el("small", null, "· vince il primo vero, dall'alto")));
+    listOf(f, "finali", probs, (x, i) => [x.titolo, x.se ? "se " + x.se : (i === design.finali.length - 1 ? "sempre: vale se nessun altro è vero" : "sempre: quelli sotto non si vedranno mai")],
+      { move: true });
+    f.append(addButton("+ Aggiungi un finale", "finali", () => ({ titolo: "Nuovo finale", se: "", testo: "", subito: false })));
+    f.append(el("h3", null, "Opinioni ", el("small", null, "· facoltative")));
+    listOf(f, "opinioni", probs, o => [o.testo, o.nasce_se ? "nasce se " + o.nasce_se : "non nasce mai"]);
+    f.append(addButton("+ Aggiungi un'opinione", "opinioni", () => ({ testo: "", nasce_se: "", cade_se: "" })));
+  },
+
+  controllo(f, probs) {
+    const d = design;
+    const rowc = (state, title, text, stepId) => el("div", { class: "checkrow" },
+      el("span", { class: "ico " + state, "aria-hidden": "true" }, state === "ok" ? "✓" : state === "err" ? "!" : "·"),
+      el("div", { class: "ct" }, el("b", null, title), text),
+      stepId ? el("button", { class: "btn", type: "button", onclick: () => goId(stepId) }, "Vai") : null);
+    const hides = d.eventi.some(e => e.nasconde), discovers = d.azioni.some(a => a.scopre);
+    const lastFin = d.finali[d.finali.length - 1];
+    const rows = [
+      !d.messaggio.trim() ? ["err", "Messaggio", "Manca: è il punto di partenza.", "messaggio"]
+        : d.messaggio.includes("…") ? ["hint", "Messaggio", "È ancora una frase da finire: «" + short(d.messaggio, 50) + "»", "messaggio"]
+        : ["ok", "Messaggio", "«" + short(d.messaggio, 70) + "»", "messaggio"],
+      d.grandezze.length ? ["ok", "Grandezze", d.grandezze.length + " nel gioco", "grandezze"] : ["err", "Grandezze", "Nessuna: non c'è niente che possa cambiare.", "grandezze"],
+      d.azioni.length >= 2 ? ["ok", "Azioni", d.azioni.length + " scelte per chi gioca", "azioni"]
+        : [d.azioni.length ? "hint" : "err", "Azioni", d.azioni.length ? "Una sola azione: chi gioca non ha una vera scelta." : "Nessuna azione.", "azioni"],
+      d.regole.length ? ["ok", "Regole", d.regole.length + " agiscono da sole", "regole"] : ["hint", "Regole", "Nessuna: va bene, se è voluto.", "regole"],
+      !d.eventi.length ? ["err", "Eventi", "Nessun evento.", "eventi"]
+        : d.eventi.length < Math.min(3, d.turni) ? ["hint", "Eventi", "Solo " + d.eventi.length + " per " + d.turni + " turni: si ripeteranno uguali.", "eventi"]
+        : ["ok", "Eventi", d.eventi.length + " per " + d.turni + " turni", "eventi"],
+      d.finali.length >= 2 ? ["ok", "Finali", d.finali.length + " modi di finire", "finali"]
+        : ["hint", "Finali", "Un solo finale: come si è giocato non cambia la fine.", "finali"],
+    ];
+    if (hides && !discovers) rows.push(["hint", "Niente si può scoprire", "Alcuni eventi nascondono qualcosa, ma nessuna azione «scopre».", "azioni"]);
+    if (lastFin && lastFin.se) rows.push(["hint", "Ultimo finale", "Ha una condizione: lasciatela vuota, così c'è sempre un finale.", "finali"]);
+    rows.forEach(r => f.append(rowc(...r)));
+    if (probs.length) {
+      f.append(el("h3", null, "Da sistemare (" + probs.length + ")"));
+      probs.slice(0, 8).forEach(p => f.append(el("div", { class: "checkrow" },
+        el("span", { class: "ico err", "aria-hidden": "true" }, "!"), el("div", { class: "ct" }, p.msg),
+        el("button", { class: "btn", type: "button", onclick: () => openProblem(p) }, "Sistema"))));
+    }
+    // la scala: che mondo interiore ha il protagonista?
+    const lv = new Set(d.grandezze.map(g => g.livello).filter(Boolean));
+    const levels = Object.entries(LIVELLO_NOME).map(([k, n]) => [lv.has(k), n]);
+    levels.push([d.opinioni.length > 0, "opinione"]);
+    const used = levels.filter(x => x[0]).length;
+    f.append(el("h3", null, "Il mondo interiore di " + d.protagonista),
+      el("p", { class: "scala" }, ...levels.map(([on, n]) => el("span", { class: "lv" + (on ? " on" : "") }, (on ? "✓ " : "– ") + n))),
+      el("p", { class: "help" }, used
+        ? "Sono i livelli della scala che il vostro gioco usa. Quelli che mancano: una scelta, o una dimenticanza?"
+        : "Nessuna grandezza è sulla scala. Il vostro protagonista prova qualcosa? Nel passo «Grandezze» potete dire che cos'è ciascuna."));
+    f.append(el("h3", null, "Prima di farlo giocare"),
+      el("ul", { class: "cura" },
+        el("li", null, "I nomi sono inventati? Nessuno deve riconoscere un compagno."),
+        el("li", null, "Il gioco mostra come vanno le cose, o fa la predica? Chi gioca deve poter non essere d'accordo."),
+        el("li", null, "Il protagonista non «perde» mai per come si sente: c'è sempre qualcuno a cui chiedere.")));
+  },
+
+  scambio(f) {
+    const d = design;
+    f.append(
+      el("ol", { class: "cura" },
+        el("li", null, "Date il telefono a un altro gruppo. Non spiegate niente."),
+        el("li", null, "Alla fine il gioco chiede «cosa voleva dire?». Ascoltate la risposta prima che scoprano il messaggio."),
+        el("li", null, "Scrivete qui cosa hanno detto, con le loro parole.")),
+      textField("Cosa hanno capito", d, "capito", { area: true, rows: 3 }),
+      el("p", { class: "help" }, d.messaggio.trim() ? "Il vostro messaggio era: «" + short(d.messaggio, 120) + "»" : "Non avete ancora scritto il messaggio."),
+      segmented("È il vostro messaggio?", d.centrato, [["sì", "Sì"], ["in parte", "In parte"], ["no", "No"]], v => { d.centrato = v; changed(); rerenderKeep(); }));
+    if (d.centrato === "sì") {
+      f.append(el("p", { class: "hint" }, "Il gioco parla da solo. Fatelo provare anche a qualcuno più grande di voi: capisce la stessa cosa?"));
+    } else if (d.centrato) {
+      f.append(el("p", { class: "hint" }, "Non è un errore: è il momento più utile. Non cambiate il messaggio, cambiate le regole: quale meccanica dovrebbe farlo sentire?"),
+        el("button", { class: "btn add", type: "button", onclick: () => goId("carte") }, "Torna alle meccaniche"));
+    }
+    f.append(el("button", { class: "btn add", type: "button", style: "margin-top:14px", onclick: () => show("condividi") }, "Manda il gioco all'insegnante"));
+  },
+};
+
+// ---------- un pezzo alla volta
+const TIPI = [
+  ["barra", "Barra da 0 a 100", { min: 0, max: 100, stile: "" }],
+  ["bipolare", "Barra da −100 a +100 (male ↔ bene)", { min: -100, max: 100, stile: "" }],
+  ["pallini", "Pallini da 0 a 5", { min: 0, max: 5, stile: "pallini" }],
+  ["contatore", "Contatore (un numero che cresce)", { min: 0, max: 99999, stile: "" }],
+  ["altro", "Su misura", null],
+];
+function tipoOf(g) {
+  const st = g.stile || autoStile(g);
+  if (st === "pallini" && g.min === 0 && g.max === 5) return "pallini";
+  if (st === "barra" && g.min === 0 && g.max === 100) return "barra";
+  if (st === "barra" && g.min === -100 && g.max === 100) return "bipolare";
+  if (st === "numero" && g.min === 0 && g.max === 99999) return "contatore";
+  return "altro";
+}
+const EDITORS = {
+  grandezze(f, g, i, hasErr) {
+    let auto = isAutoName(g);
+    const nameInput = el("input", { type: "text", class: "code", autocapitalize: "off", autocorrect: "off", spellcheck: "false" });
+    nameInput.value = g.nome;
+    const setName = (nn) => { renameGrandezza(g.nome, nn); g.nome = nn; nameInput.value = nn; };
+    const labelInput = el("input", { type: "text", placeholder: "es. fiducia negli altri" });
+    labelInput.value = lab(g) === "nuova grandezza" ? "" : lab(g);
+    labelInput.addEventListener("input", () => {
+      const v = labelInput.value.trim();
+      if (auto) setName(uniqueSlug(v || "nuova grandezza", g));
+      g.etichetta = v; tidyGrandezza(g); changed();
+    });
+    nameInput.addEventListener("change", () => { auto = false; setName(uniqueSlug(nameInput.value, g)); tidyGrandezza(g); changed(); });
+    let tipo = tipoOf(g);
+    if (wiz.edit.custom) tipo = "altro";
+    f.append(
+      fieldWrap("Come si chiama", null, labelInput),
+      selectField("Che cos'è", g.livello, LIVELLI, v => {
+        g.livello = v;
+        const def = LIVELLO_DEF[v];
+        if (def) {
+          if (!g.spiega) g.spiega = def.spiega;
+          if (wiz.edit.fresh) { g.min = def.min; g.max = def.max; g.stile = ""; g.inizio = Math.max(g.min, Math.min(g.max, g.inizio)); wiz.edit.custom = false; }
+        }
+        tidyGrandezza(g); changed(); rerenderKeep();
+      }, "sulla scala di ciò che si prova"),
+      selectField("Com'è fatta", tipo, TIPI.map(t => [t[0], t[1]]), v => {
+        const preset = TIPI.find(t => t[0] === v)[2];
+        wiz.edit.custom = !preset;
+        if (preset) { Object.assign(g, preset); g.inizio = Math.max(g.min, Math.min(g.max, g.inizio)); tidyGrandezza(g); changed(); }
+        rerenderKeep();
+      }));
+    if (tipo === "altro") {
+      f.append(el("div", { class: "row2" }, numField("Minimo", g, "min"), numField("Massimo", g, "max")),
+        selectField("Come si mostra", g.stile, Object.entries(STILI), v => { g.stile = v; tidyGrandezza(g); changed(); }));
+    }
+    f.append(
+      numField("Da quanto parte", g, "inizio"),
+      segmented("Chi gioca la vede?", g.vista, [["sempre", "Sì"], ["se scopri", "Se la scopre"], ["mai", "No, dietro le quinte"]], v => { g.vista = v; changed(); }),
+      more((g.spiega ? 1 : 0) + (auto ? 0 : 1), hasErr,
+        textField("Scritta piccola sotto il nome", g, "spiega", { small: "es. «come si sente»" }),
+        fieldWrap("Nome nelle formule", "di solito non serve toccarlo", nameInput,
+          el("p", { class: "help" }, "Se lo cambiate, le formule che lo usano si aggiornano da sole."))));
+  },
+
+  azioni(f, a, i, hasErr) {
+    const replies = el("div");
+    const renderR = () => {
+      replies.innerHTML = "";
+      replies.append(el("label", null, "Risposte, una per volta ", el("small", null, "· {opinione} ripete l'ultima opinione")));
+      a.risposte.forEach((r, k) => {
+        const inp = el("input", { type: "text", "aria-label": "Risposta " + (k + 1) }); inp.value = r;
+        inp.addEventListener("input", () => { a.risposte[k] = inp.value; changed(); });
+        replies.append(el("div", { class: "b1", style: "margin:6px 0" }, inp,
+          el("button", { class: "x", type: "button", "aria-label": "Togli la risposta", onclick: () => { a.risposte.splice(k, 1); changed(); renderR(); } }, "×")));
+      });
+      replies.append(el("button", { class: "btn add", type: "button", onclick: () => { a.risposte.push(""); changed(); renderR(); } }, "+ Aggiungi una risposta"));
+    };
+    renderR();
+    f.append(
+      textField("Scritta sul pulsante", a, "nome"),
+      effectsField("Cosa cambia quando la si sceglie", a, "effetti"),
+      check("Scopre ciò che è nascosto (negli eventi e nelle grandezze)", a, "scopre"),
+      more((a.se ? 1 : 0) + (a.dopo ? 1 : 0) + (a.chi || a.risposte.length ? 1 : 0), hasErr,
+        condField("Si può scegliere solo se", a, "se", { empty: "Sempre: nessuna condizione." }),
+        textField("Frase che compare dopo", a, "dopo", { small: "{nome} è il protagonista" }),
+        textField("Qualcuno risponde? Chi", a, "chi", { small: "es. il nome di un chatbot" }),
+        replies));
+  },
+
+  regole(f, r, i, hasErr) {
+    f.append(
+      textField("Nome della regola", r, "nome", { help: "Un nome che dica cosa fa: «Ci si abitua», «Il sollievo svanisce»." }),
+      segmented("Quando agisce", r.quando, [["fine turno", "A fine turno"], ["inizio turno", "A inizio turno"]], v => { r.quando = v; changed(); }),
+      effectsField("Cosa cambia", r, "allora"),
+      more((r.se ? 1 : 0) + (r.testo ? 1 : 0), hasErr,
+        condField("Solo se", r, "se", { empty: "Sempre, a ogni turno." }),
+        textField("Frase che compare quando agisce", r, "testo")));
+  },
+
+  eventi(f, e, i, hasErr) {
+    f.append(
+      segmented("Da dove arriva", e.fonte, FONTI_OPT, v => { e.fonte = v; changed(); }),
+      textField("Chi", e, "chi", { small: "un nome inventato, o vuoto" }),
+      textField("Cosa si vede", e, "mostra", { area: true, rows: 3 }),
+      textField("Cosa c'è dietro", e, "nasconde", { area: true, rows: 2, small: "facoltativo: si scopre con un'azione che «scopre»" }),
+      effectsField("Cosa cambia quando arriva", e, "effetti"),
+      more((e.se_scopri ? 1 : 0) + (e.se ? 1 : 0), hasErr,
+        effectsField("Cosa cambia quando si scopre cosa c'è dietro", e, "se_scopri"),
+        condField("Compare solo se", e, "se", { empty: "Sempre." })));
+  },
+
+  opinioni(f, o, i, hasErr) {
+    f.append(
+      textField("Cosa finisce per credere", o, "testo", { placeholder: "es. Valgo quanto i miei like" }),
+      condField("Nasce se", o, "nasce_se", { empty: "Mai: aggiungete una condizione." }),
+      more(o.cade_se ? 1 : 0, hasErr, condField("Cade (viene messa in discussione) se", o, "cade_se", { empty: "Non cade mai." })));
+  },
+
+  finali(f, x, i, hasErr) {
+    f.append(
+      textField("Titolo", x, "titolo"),
+      textField("Cosa si legge", x, "testo", { area: true, rows: 4, small: "{nome} è il protagonista" }),
+      condField("Si arriva qui se", x, "se", { empty: "Sempre: è il finale che vale quando nessun altro è vero." }),
+      more(x.subito ? 1 : 0, hasErr, check("Chiude il gioco subito, appena la condizione è vera", x, "subito")));
+  },
+
+  storia(f) {
+    const d = design;
+    f.append(
+      textField("Come si chiama il protagonista", d, "protagonista", { small: "nei testi si scrive {nome}" }),
+      slider("Quanti turni dura", d, "turni", 3, 20, 1),
+      segmented("In che ordine arrivano gli eventi", d.ordine, [["in fila", "In fila"], ["a caso", "A caso"]], v => { d.ordine = v; changed(); }));
+  },
+
+  confronto(f) {
+    const c = design.confronta;
+    const names = [["", "— nessuna —"], ...design.grandezze.map(g => [g.nome, lab(g)])];
+    f.append(
+      el("p", { class: "qhelp" }, "Una linea gialla collega due grandezze e ne mostra la distanza: per esempio ciò che si mostra e ciò che si sente."),
+      selectField("Prima grandezza", c.a, names, v => { c.a = v; changed(); }),
+      selectField("Seconda grandezza", c.b, names, v => { c.b = v; changed(); }),
+      more(c.se ? 1 : 0, false, condField("Mostra la linea solo se", c, "se", { empty: "Sempre." })));
+  },
+};
+
+function renderEditor(head, f, bar, probs) {
+  const e = wiz.edit, step = STEPS[wiz.step];
+  const list = KINDS[e.kind] ? design[e.kind] : null;
+  const item = list ? list[e.index] : null;
+  if (list && !item) { wiz.edit = null; return renderWizard(); }
+  const title = e.kind === "storia" ? "La storia" : e.kind === "confronto" ? "Confronto" : KINDS[e.kind] + (list.length > 1 ? " " + (e.index + 1) + " di " + list.length : "");
+  head.append(el("button", { class: "backlink", type: "button", onclick: closeEdit }, "‹ " + step.nome), el("h2", { class: "q" }, title));
+  const mine = probs.filter(p => p.list === e.kind && (p.index === undefined || p.index === e.index));
+  if (e.kind === "grandezze" && mine.length) f.append(el("div", { class: "errbox" }, ...mine.map(p => el("div", null, "! " + p.msg))));
+  EDITORS[e.kind](f, item, e.index, mine.length > 0);
+  if (list) {
+    const uses = e.kind === "grandezze" ? countUses(item.nome) : 0;
+    bar.append(twoStep("Elimina", uses ? "Usata in " + uses + (uses === 1 ? " punto" : " punti") + ": tocca ancora" : "Sicuri? Tocca ancora",
+      () => { list.splice(e.index, 1); changed(); closeEdit(); }, "btn danger"));
+  }
+  bar.append(el("button", { class: "btn main grow", type: "button", onclick: closeEdit }, "Fatto ✓"));
+}
+
+// ------------------------------------------------------------------ codice
+function showCode() {
+  if (!codeDirty) $("code").value = serialize(design);
+  const probs = problemsOf(design).map(p => p.msg);
+  $("codeMsg").className = probs.length ? "err" : "help";
+  $("codeMsg").textContent = probs.length ? "Da sistemare: " + probs.slice(0, 4).join("; ") + "." : (removedEmoji ? "Ho tolto " + removedEmoji + " emoji: nel gioco non si vedono." : "");
+}
+let errLine = 0;
+function applyCode() {
+  try {
+    const d = normalize(parseLua($("code").value));
+    design = d; codeDirty = false; save(); wiz.edit = null; wiz.started = true; saveWiz();
+    const probs = problemsOf(d).map(p => p.msg);
+    $("codeMsg").className = probs.length ? "err" : "ok";
+    $("codeMsg").textContent = probs.length ? "Il codice si legge, ma: " + probs.slice(0, 4).join("; ") + "." : "Tutto a posto: il gioco userà questo codice.";
+    $("gotoErr").hidden = true;
+    return true;
+  } catch (e) {
+    errLine = e.line || 0;
+    $("codeMsg").className = "err";
+    $("codeMsg").textContent = (e.line ? "Riga " + e.line + ": " : "") + e.message;
+    $("gotoErr").hidden = !e.line;
+    return false;
+  }
+}
+function gotoLine(n) {
+  const ta = $("code"); const lines = ta.value.split("\n");
+  let start = 0; for (let i = 0; i < n - 1 && i < lines.length; i++) start += lines[i].length + 1;
+  ta.focus(); ta.setSelectionRange(start, start + (lines[n - 1] || "").length);
+}
+
+// ------------------------------------------------------------------ gioco
+let pendingLua = null;
+function play() {
+  pendingLua = serialize(design);
+  lastPlayed = pendingLua;
+  const n = removedEmoji;
+  const local = /[?&]engine=local/.test(location.search) ? "&engine=local" : "";
+  $("game").src = GAME_PAGE + "?v=" + Date.now() + local;
+  $("playNote").textContent = "«" + clean(design.titolo) + "»" + (n ? " · emoji tolte: nel gioco non si vedono" : "");
+  removedEmoji = n;
+}
+window.addEventListener("message", (e) => {
+  if (e.data && e.data.type === "game-ready" && e.source) e.source.postMessage({ type: "design", lua: pendingLua }, "*");
+});
+
+// ------------------------------------------------------------------ schede in alto
+let current = "gioca";
+function show(tab) {
+  if (current === "codice" && tab !== "codice" && codeDirty) { if (!applyCode()) return; }
+  current = tab;
+  document.querySelectorAll("nav button").forEach(b => b.classList.toggle("on", b.dataset.tab === tab));
+  document.querySelectorAll("main > section").forEach(s => s.classList.toggle("on", s.id === "tab-" + tab));
+  window.scrollTo(0, 0);
+  if (tab === "codice") showCode();
+  if (tab === "progetta") renderWizard();
+  if (tab === "gioca" && serialize(design) !== lastPlayed) play();
+}
+document.querySelectorAll("nav button").forEach(b => b.addEventListener("click", () => show(b.dataset.tab)));
+$("restart").addEventListener("click", play);
+$("toDesign").addEventListener("click", () => show("progetta"));
+$("code").addEventListener("input", () => { codeDirty = true; });
+$("applyCode").addEventListener("click", applyCode);
+$("gotoErr").addEventListener("click", () => gotoLine(errLine));
+$("copyBtn").addEventListener("click", async () => {
+  if (codeDirty && !applyCode()) { $("copyMsg").textContent = "Prima correggete l'errore nel codice."; return; }
+  const text = serialize(design);
+  try { await navigator.clipboard.writeText(text); $("copyMsg").textContent = "Copiato. Ora incollatelo in un messaggio all'insegnante."; }
+  catch (e) {
+    $("pasteBox").value = text; $("pasteBox").focus(); $("pasteBox").select();
+    $("copyMsg").textContent = "Il telefono non mi lascia copiare: ho messo il testo qui sotto, selezionatelo e copiatelo a mano.";
+  }
+});
+$("pasteBtn").addEventListener("click", () => {
+  try {
+    const d = normalize(parseLua($("pasteBox").value));
+    if (!d.eventi.length || !d.azioni.length) throw new Error("mancano eventi o azioni.");
+    design = d; codeDirty = false; save(); wiz.edit = null; wiz.started = true; wiz.step = 0; saveWiz();
+    $("pasteMsg").className = "ok"; $("pasteMsg").textContent = "Caricato: «" + d.titolo + "». Andate su «Gioca».";
+  } catch (e) {
+    $("pasteMsg").className = "err"; $("pasteMsg").textContent = "Non riesco a leggerlo. " + (e.line ? "Riga " + e.line + ": " : "") + e.message;
+  }
+});
+
+EXAMPLE_JSON = JSON.stringify(normalize(parseLua(EXAMPLE_LUA)));
+BLANK_JSON = JSON.stringify(normalize(parseLua(BLANK_LUA)));
+design = loadSaved() || normalize(parseLua(EXAMPLE_LUA));
+loadWiz();
+if (!isExample()) wiz.started = true;
+renderWizard();
+// Prima visita (esempio intatto): si apre sul gioco, per giocarlo insieme.
+// Con un gioco proprio: si apre su «Progetta», al passo dove il gruppo era rimasto.
+if (isExample()) play(); else show("progetta");
+</script>
+</body>
+</html>

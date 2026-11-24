@@ -124,6 +124,9 @@
   .add { width: 100%; margin-top: 4px; }
   .linkbtn { background: none; border: 0; color: var(--dim); text-decoration: underline; font: inherit; font-size: 13px; padding: 10px 0; min-height: 40px; cursor: pointer; }
   .grow { flex: 1; }
+  .gamebar { display: flex; align-items: center; justify-content: space-between; gap: 10px; font-size: 13px; color: var(--dim); }
+  .gamebar .name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .gamebar .linkbtn { flex: none; padding-left: 8px; }
   #wizBar { position: fixed; left: 0; right: 0; bottom: 0; z-index: 6; display: flex; gap: 8px; padding: 8px 12px; background: var(--bg); border-top: 1px solid var(--line); }
   #wizBar:empty { display: none; }
   #wizBar .btn { min-height: 48px; white-space: nowrap; padding: 9px 10px; }
@@ -625,7 +628,8 @@ let design = null, lastPlayed = null, codeDirty = false;
 const $ = (id) => document.getElementById(id);
 function save() { try { localStorage.setItem("hospes-design-v2", JSON.stringify(design)); } catch (e) { } }
 function loadSaved() { try { const s = localStorage.getItem("hospes-design-v2"); if (s) return normalize(JSON.parse(s)); } catch (e) { } return null; }
-function changed() { save(); codeDirty = false; }
+function gameLabel() { return "Gioco: «" + (String(design.titolo || "").trim() || "senza titolo") + "»"; }
+function changed() { save(); codeDirty = false; const g = document.getElementById("gameName"); if (g) g.textContent = gameLabel(); }
 let toastTimer = 0;
 function toast(t) {
   let el = document.querySelector(".toast");
@@ -1023,6 +1027,10 @@ function renderWizard() {
   if (wiz.edit) return renderEditor(head, f, bar, probs);
   const info = stepInfo(probs), cur = STEPS[wiz.step];
   if (!wiz.seen[cur.id]) { wiz.seen[cur.id] = true; saveWiz(); }
+  // quale gioco è aperto, e come cambiarlo: visibile a ogni passo
+  head.append(el("div", { class: "gamebar" },
+    el("span", { class: "name", id: "gameName" }, gameLabel()),
+    el("button", { class: "linkbtn", type: "button", onclick: () => { wiz.started = false; saveWiz(); renderWizard(); window.scrollTo(0, 0); } }, "Cambia gioco")));
   // fasi
   const phases = el("div", { class: "phases" });
   FASI.forEach((name, i) => {
@@ -1135,8 +1143,7 @@ const SCREENS = {
       textField("Titolo del gioco", d, "titolo"),
       textField("Chi siete", d, "autori", { small: "numero del gruppo e classe, niente cognomi" }),
       more(d.presentazione ? 1 : 0, false,
-        textField("Presentazione", d, "presentazione", { area: true, rows: 2, small: "cosa legge chi inizia a giocare" })),
-      el("button", { class: "linkbtn", type: "button", onclick: () => { wiz.started = false; saveWiz(); renderWizard(); window.scrollTo(0, 0); } }, "Cambia gioco (nuovo, oppure l'esempio)"));
+        textField("Presentazione", d, "presentazione", { area: true, rows: 2, small: "cosa legge chi inizia a giocare" })));
   },
 
   carte(f) {
